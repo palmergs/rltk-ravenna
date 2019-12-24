@@ -27,7 +27,7 @@ impl GameState for State {
         ctx.cls();
         player_input(self, ctx);
         self.run_systems();
-        let map = self.ecs.fetch::<Vec<TileType>>();
+        let map = self.ecs.fetch::<Map>();
         draw_map(&map, ctx);
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
@@ -59,10 +59,10 @@ struct Renderable {
     bg: RGB,
 }
 
-fn draw_map(map: &[TileType], ctx: &mut Rltk) {
+fn draw_map(map: &Map, ctx: &mut Rltk) {
     let mut x = 0;
     let mut y = 0;
-    for tile in map.iter() {
+    for tile in map.tiles.iter() {
         match tile {
             TileType::Floor => {
                 ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0.0, 0.0, 0.0), rltk::to_cp437('.'));
@@ -83,8 +83,8 @@ fn draw_map(map: &[TileType], ctx: &mut Rltk) {
 fn main() {
     let context = Rltk::init_simple8x8(80, 50, "Hello Rust World!", "resources");
     let mut gs = State { ecs: World::new() };
-    let (rooms, map) = new_map_rooms_and_corridors();
-    let (px, py) = rooms[0].center();
+    let map = Map::new_map_rooms_and_corridors();
+    let (px, py) = map.rooms[0].center();
 
     gs.ecs.insert(map);
     gs.ecs.register::<Player>();
