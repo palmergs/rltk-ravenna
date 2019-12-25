@@ -8,6 +8,10 @@ use std::cmp::{max, min};
 extern crate specs;
 use specs::prelude::*;
 
+const MAPWIDTH : usize = 80;
+const MAPHEIGHT : usize = 50;
+const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
     Wall,
@@ -28,21 +32,21 @@ pub struct Map {
 impl Map {
     /// Converts coordinates into a linear index
     pub fn xy_idx(x: i32, y: i32) -> usize {
-        (y as usize * 80) + x as usize
+        (y as usize * MAPWIDTH) + x as usize
     }
 
     /// Makes a map with solid walls and 400 randomly placed
     /// squares.
     pub fn new_map_random() -> Map {
         let mut map = Map {
-            tiles : vec![TileType::Wall; 80*50],
-            revealed : vec![false; 80*50],
-            visible : vec![false; 80*50],
-            blocked: vec![false; 80*50],
+            tiles : vec![TileType::Wall; MAPCOUNT],
+            revealed : vec![false; MAPCOUNT],
+            visible : vec![false; MAPCOUNT],
+            blocked: vec![false; MAPCOUNT],
             rooms : Vec::new(),
-            width : 80,
-            height : 50,
-            contents : vec![Vec::new(); 80*50],
+            width : MAPWIDTH as i32,
+            height : MAPHEIGHT as i32,
+            contents : vec![Vec::new(); MAPCOUNT],
         };
 
         for x in 0..map.width {
@@ -70,14 +74,14 @@ impl Map {
 
     pub fn new_map_rooms_and_corridors() -> Map {
         let mut map = Map {
-            tiles : vec![TileType::Wall; 80*50],
-            revealed : vec![false; 80*50],
-            visible : vec![false; 80*50],
-            blocked : vec![false; 80*50],
+            tiles : vec![TileType::Wall; MAPCOUNT],
+            revealed : vec![false; MAPCOUNT],
+            visible : vec![false; MAPCOUNT],
+            blocked : vec![false; MAPCOUNT],
             rooms : Vec::new(),
-            width : 80,
-            height : 50,
-            contents : vec![Vec::new(); 80*50],
+            width : MAPWIDTH as i32,
+            height : MAPHEIGHT as i32,
+            contents : vec![Vec::new(); MAPCOUNT],
         };
 
         const MAX_ROOMS : i32 = 30;
@@ -142,7 +146,10 @@ impl Map {
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
-        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 { return false }
+        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 { 
+            return false 
+        }
+
         let idx = Map::xy_idx(x, y);
         !self.blocked[idx]
     }

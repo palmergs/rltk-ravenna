@@ -10,6 +10,12 @@ pub use components::*;
 mod map;
 pub use map::*;
 
+mod gui;
+use gui::*;
+
+mod gamelog;
+use gamelog::*;
+
 mod player;
 use player::*;
 
@@ -92,6 +98,8 @@ impl GameState for State {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        draw_ui(&self.ecs, ctx);
     }
 }
 
@@ -196,6 +204,7 @@ fn main() {
     gs.ecs.insert(player_entity);
     gs.ecs.insert(Point::new(px, py));
     gs.ecs.insert(RunState::PreRun);
+    gs.ecs.insert(gamelog::GameLog{ entries: vec!["Welcome to Rusty Roguelike".to_string()] });
 
     rltk::main_loop(context, gs);
 }

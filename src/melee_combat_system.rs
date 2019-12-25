@@ -1,6 +1,6 @@
 extern crate specs;
 use specs::prelude::*;
-use super::{CombatStats, WantsToMelee, Name, SufferDamage};
+use super::{ CombatStats, WantsToMelee, Name, SufferDamage, GameLog };
 
 extern crate rltk;
 use rltk::{console};
@@ -9,13 +9,20 @@ pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
     type SystemData = ( Entities<'a>,
+                        WriteExpect<'a, GameLog>,
                         WriteStorage<'a, WantsToMelee>,
                         ReadStorage<'a, Name>,
                         ReadStorage<'a, CombatStats>,
                         WriteStorage<'a, SufferDamage> );
 
     fn run(&mut self, data : Self::SystemData) {
-        let (entities, mut wants_melee, names, combat_stats, mut inflict_damage) = data;
+        let (entities, 
+            mut log, 
+            mut wants_melee, 
+            names, 
+            combat_stats, 
+            mut inflict_damage) = data;
+
         for (_entity, wants_melee, name, stats) in (&entities, &wants_melee, &names, &combat_stats).join() {
             if stats.hp > 0 {
                 let target_stats = combat_stats.get(wants_melee.target).unwrap();
@@ -23,9 +30,9 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let target_name = names.get(wants_melee.target).unwrap();
                     let damage = i32::max(0, stats.power - target_stats.defense);
                     if damage == 0 {
-                        console::log(&format!("{} is unable to hurt {}", &name.name, &target_name.name));
+                        log.entries.insert(0, format!("{} is unable to hurt {}", &name.name, &target_name.name));
                     } else {
-                        console::log(&format!("{} hits {} for {} damage", &name.name, &target_name.name, damage));
+                        log.entries.insert(0, format!("{} hits {} for {} damage", &name.name, &target_name.name, damage));
                         inflict_damage.insert(wants_melee.target, SufferDamage { amount: damage });
                     }
                 }
