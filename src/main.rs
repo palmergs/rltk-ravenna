@@ -1,7 +1,8 @@
+#![recursion_limit="16"]
+
 rltk::add_wasm_support!();
-use rltk::{Console, GameState, Rltk, VirtualKeyCode, RGB};
+use rltk::{Console, GameState, Rltk, RGB};
 use specs::prelude::*;
-use std::cmp::{max, min};
 
 mod components;
 pub use components::*;
@@ -14,6 +15,9 @@ use player::*;
 
 mod rect;
 pub use rect::Rect;
+
+mod visibility_system;
+use visibility_system::VisibilitySystem;
 
 #[macro_use]
 extern crate specs_derive;
@@ -39,37 +43,31 @@ impl GameState for State {
 
 impl State {
     fn run_systems(&mut self) {
+        let mut vis = VisibilitySystem{};
+        vis.run_now(&self.ecs);
         self.ecs.maintain();
     }
-}
-
-#[derive(Component, Debug)]
-struct Player {}
-
-#[derive(Component)]
-struct Position {
-    x: i32,
-    y: i32,
-}
-
-#[derive(Component)]
-struct Renderable {
-    glyph: u8,
-    fg: RGB,
-    bg: RGB,
 }
 
 fn draw_map(map: &Map, ctx: &mut Rltk) {
     let mut x = 0;
     let mut y = 0;
-    for tile in map.tiles.iter() {
-        match tile {
-            TileType::Floor => {
-                ctx.set(x, y, RGB::from_f32(0.5, 0.5, 0.5), RGB::from_f32(0.0, 0.0, 0.0), rltk::to_cp437('.'));
-            },
-            TileType::Wall => {
-                ctx.set(x, y, RGB::from_f32(0.8, 0.8, 0.8), RGB::from_f32(0.0, 0.0, 0.0), rltk::to_cp437('#'));
+    for (idx, tile) in map.tiles.iter().enumerate() {
+        if map.revealed[idx] {
+            let glyph;
+            let mut fg;
+            match tile {
+                TileType::Floor => {
+                    glyph = rltk::to_cp437('.');
+                    fg = RGB::from_f32(0.0, 0.4, 0.4);
+                },
+                TileType::Wall => {
+                    glyph = rltk::to_cp437('#');
+                    fg = RGB::from_f32(0.4, 0.4, 0.0);
+                }
             }
+            if !map.visible[idx] { fg = fg.to_greyscale(); }
+            ctx.set(x, y, fg, RGB::from_f32(0.0, 0.0, 0.0), glyph);
         }
 
         x += 1;
@@ -90,6 +88,7 @@ fn main() {
     gs.ecs.register::<Player>();
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
+    gs.ecs.register::<Viewshed>();
     gs.ecs
         .create_entity()
         .with(Position { x: px, y: py })
@@ -99,6 +98,7 @@ fn main() {
             bg: RGB::named(rltk::BLACK),
         })
         .with(Player {})
+        .with(Viewshed { tiles: Vec::new(), range: 8, dirty: true })
         .build();
 
     rltk::main_loop(context, gs);

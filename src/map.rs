@@ -1,4 +1,4 @@
-use rltk::{ RGB, Rltk, Console, RandomNumberGenerator };
+use rltk::{ BaseMap, Algorithm2D, Point };
 use super::{Rect};
 use std::cmp::{max, min};
 
@@ -10,6 +10,8 @@ pub enum TileType {
 
 pub struct Map {
     pub tiles : Vec<TileType>,
+    pub revealed : Vec<bool>,
+    pub visible : Vec<bool>,
     pub rooms : Vec<Rect>,
     pub width : i32,
     pub height : i32,
@@ -26,6 +28,8 @@ impl Map {
     pub fn new_map_random() -> Map {
         let mut map = Map {
             tiles : vec![TileType::Wall; 80*50],
+            revealed : vec![false; 80*50],
+            visible : vec![false; 80*50],
             rooms : Vec::new(),
             width : 80,
             height : 50,
@@ -57,6 +61,8 @@ impl Map {
     pub fn new_map_rooms_and_corridors() -> Map {
         let mut map = Map {
             tiles : vec![TileType::Wall; 80*50],
+            revealed : vec![false; 80*50],
+            visible : vec![false; 80*50],
             rooms : Vec::new(),
             width : 80,
             height : 50,
@@ -67,12 +73,11 @@ impl Map {
         const MAX_SIZE : i32 = 10;
 
         let mut rng = rltk::RandomNumberGenerator::new();
-        for i in 0..MAX_ROOMS {
+        for _i in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
             let x = rng.range(1, map.width - 1 - w);
             let y = rng.range(1, map.height - 1 - h);
-
 
             let room = Rect::new(x, y, w, h);
             let mut ok = true;
@@ -122,5 +127,35 @@ impl Map {
             let idx = Map::xy_idx(x, y);
             map.tiles[idx] = TileType::Floor;
         }
+    }
+}
+
+impl BaseMap for Map {
+    fn is_opaque(&self, idx: i32) -> bool {
+        self.tiles[idx as usize] == TileType::Wall
+    }
+
+    fn get_available_exits(&self, idx: i32) -> Vec<(i32, f32)> {
+        Vec::new()
+    }
+
+    fn get_pathing_distance(&self, idx1: i32, idx2: i32) -> f32 {
+        let p1 = Point::new(idx1 % self.width, idx1 / self.width);
+        let p2 = Point::new(idx2 % self.width, idx2 / self.width);
+        rltk::DistanceAlg::Pythagoras.distance2d(p1, p2)
+    }
+}
+
+impl Algorithm2D for Map {
+    fn in_bounds(&self, pt : Point) -> bool {
+        pt.x > 0 && pt.x < self.width - 1 && pt.y > 0 && pt.y < self.height - 1
+    }
+
+    fn point2d_to_index(&self, pt : Point) -> i32 {
+        (pt.y * self.width) + pt.x
+    }
+
+    fn index_to_point2d(&self, idx : i32) -> Point {
+        Point { x: idx % self.width, y: idx / self.width }
     }
 }
