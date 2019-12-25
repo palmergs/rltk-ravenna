@@ -1,6 +1,12 @@
-use rltk::{ BaseMap, Algorithm2D, Point };
+extern crate rltk;
+use rltk::{ RGB, Rltk, Console, RandomNumberGenerator, BaseMap, Algorithm2D, Point };
+
 use super::{Rect};
+
 use std::cmp::{max, min};
+
+extern crate specs;
+use specs::prelude::*;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum TileType {
@@ -157,5 +163,36 @@ impl Algorithm2D for Map {
 
     fn index_to_point2d(&self, idx : i32) -> Point {
         Point { x: idx % self.width, y: idx / self.width }
+    }
+}
+
+pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
+    let map = ecs.fetch::<Map>();
+
+    let mut x = 0;
+    let mut y = 0;
+    for (idx, tile) in map.tiles.iter().enumerate() {
+        if map.revealed[idx] {
+            let glyph;
+            let mut fg;
+            match tile {
+                TileType::Floor => {
+                    glyph = rltk::to_cp437('.');
+                    fg = RGB::from_f32(0.0, 0.4, 0.4);
+                },
+                TileType::Wall => {
+                    glyph = rltk::to_cp437('#');
+                    fg = RGB::from_f32(0.4, 0.4, 0.0);
+                }
+            }
+            if !map.visible[idx] { fg = fg.to_greyscale(); }
+            ctx.set(x, y, fg, RGB::from_f32(0.0, 0.0, 0.0), glyph);
+        }
+
+        x += 1;
+        if x > 79 {
+            x = 0;
+            y += 1;
+        }
     }
 }

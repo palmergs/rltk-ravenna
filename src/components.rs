@@ -5,9 +5,17 @@ use specs::prelude::*;
 pub struct Player {}
 
 #[derive(Component)]
+pub struct Monster {}
+
+#[derive(Component)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
+}
+
+#[derive(Component, Debug)]
+pub struct Name {
+    pub name: String,
 }
 
 #[derive(Component)]

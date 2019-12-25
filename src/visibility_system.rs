@@ -19,7 +19,7 @@ impl<'a> System<'a> for VisibilitySystem {
                 viewshed.dirty = false;
                 viewshed.tiles.clear();
                 viewshed.tiles = field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
-                viewshed.tiles.retain(|p| p.x > 0 && p.x < map.width && p.y > 0 && p.y < map.height);
+                viewshed.tiles.retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height);
                
                 let _p : Option<&Player> = player.get(ent);
                 if let Some(_p) = _p {
