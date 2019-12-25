@@ -25,6 +25,12 @@ use monster_ai_system::MonsterAI;
 mod map_indexing_system;
 use map_indexing_system::MapIndexingSystem;
 
+mod melee_combat_system;
+use melee_combat_system::MeleeCombatSystem;
+
+mod damage_system;
+use damage_system::DamageSystem;
+
 #[macro_use]
 extern crate specs_derive;
 
@@ -86,6 +92,9 @@ fn main() {
 
     gs.ecs.register::<Player>();
     gs.ecs.register::<Monster>();
+    gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Viewshed>();
@@ -106,6 +115,12 @@ fn main() {
         .with(Player {})
         .with(Viewshed { tiles: Vec::new(), range: 8, dirty: true })
         .with(Name { name: "Player".to_string() })
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
         .build();
 
     let mut rng = rltk::RandomNumberGenerator::new();
@@ -128,15 +143,21 @@ fn main() {
 
         gs.ecs
             .create_entity()
-            .with(Position { x: x, y: y })
+            .with(Position { x, y })
             .with(Renderable {
-                glyph: glyph,
+                glyph,
                 fg: RGB::named(rltk::RED),
                 bg: RGB::named(rltk::BLACK),
             })
             .with(Viewshed { tiles: Vec::new(), range: 8, dirty: true })
             .with(Monster {})
             .with(Name { name: format!("{} #{}", name, i) })
+            .with(CombatStats {
+                max_hp: 16,
+                hp: 16,
+                defense: 1,
+                power: 4,
+            })
             .with(BlocksTile {})
             .build();
     }

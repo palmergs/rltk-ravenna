@@ -22,6 +22,7 @@ pub struct Map {
     pub rooms : Vec<Rect>,
     pub width : i32,
     pub height : i32,
+    pub contents : Vec<Vec<Entity>>,
 }
 
 impl Map {
@@ -41,6 +42,7 @@ impl Map {
             rooms : Vec::new(),
             width : 80,
             height : 50,
+            contents : vec![Vec::new(); 80*50],
         };
 
         for x in 0..map.width {
@@ -75,6 +77,7 @@ impl Map {
             rooms : Vec::new(),
             width : 80,
             height : 50,
+            contents : vec![Vec::new(); 80*50],
         };
 
         const MAX_ROOMS : i32 = 30;
@@ -147,6 +150,12 @@ impl Map {
     pub fn populate_blocked(&mut self) {
         for (i, tile) in self.tiles.iter_mut().enumerate() {
             self.blocked[i] = *tile == TileType::Wall;
+        }
+    }
+
+    pub fn clear_contents(&mut self) {
+        for content in self.contents.iter_mut() {
+            content.clear();
         }
     }
 }
