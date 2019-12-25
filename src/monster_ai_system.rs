@@ -1,40 +1,69 @@
 extern crate specs;
 use specs::prelude::*;
 
-use super::{Viewshed, Monster, Name, Map, Position};
+use super::{
+    Map,
+    Viewshed,
+    Monster,
+    RunState,
+    Position,
+    WantsToMelee };
 
 extern crate rltk;
-use rltk::{Point, console};
+use rltk::{Point};
 
 pub struct MonsterAI {}
 
 impl<'a> System<'a> for MonsterAI {
     type SystemData = ( WriteExpect<'a, Map>,
                         ReadExpect<'a, Point>,
+                        ReadExpect<'a, Entity>,
+                        ReadExpect<'a, RunState>,
+                        Entities<'a>,
                         WriteStorage<'a, Viewshed>,
                         ReadStorage<'a, Monster>,
-                        ReadStorage<'a, Name>,
-                        WriteStorage<'a, Position> );
+                        WriteStorage<'a, Position>,
+                        WriteStorage<'a, WantsToMelee> );
 
     fn run(&mut self, data : Self::SystemData) {
-        let (mut map, player_pos, mut viewshed, monster, name, mut position) = data;
+        let (mut map,
+            player_pos, 
+            player, 
+            runstate,
+            entities, 
+            mut viewshed, 
+            monster, 
+            mut position, 
+            mut wants_to_melee) = data;
 
-        for (mut viewshed, _monster, name, mut pos) in (&mut viewshed, &monster, &name, &mut position).join() {
+        if *runstate != RunState::MonsterTurn { return; }
 
-            let distance = rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
+        for (entity, mut viewshed, _m, mut pos) in (&entities, &mut viewshed, &monster, &mut position).join() {
+
+            let distance = rltk::DistanceAlg::Pythagoras.distance2d(
+                Point::new(pos.x, pos.y), 
+                *player_pos);
+
             if distance < 1.5 {
-                console::log(&format!("{} shouts insults", name.name));
-                return;
-            }
-            if viewshed.tiles.contains(&*player_pos) {
+                wants_to_melee.
+                    insert(entity, WantsToMelee { target: *player }).
+                    expect("Unable to insert attack");
+            } else if viewshed.tiles.contains(&*player_pos) {
+
+                // path to the player
                 let path = rltk::a_star_search(
                     Map::xy_idx(pos.x, pos.y) as i32,
                     Map::xy_idx(player_pos.x, player_pos.y) as i32,
                     &mut *map);
 
                 if path.success && path.steps.len() > 1 {
+                    let mut idx = Map::xy_idx(pos.x, pos.y);
+                    map.blocked[idx] = false;
+
                     pos.x = path.steps[1] % map.width;
                     pos.y = path.steps[1] / map.width;
+                    idx = Map::xy_idx(pos.x, pos.y);
+                    map.blocked[idx] = true;
                     viewshed.dirty = true;
                 }
             }
