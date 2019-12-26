@@ -145,13 +145,11 @@ fn main() {
 
     let map = Map::new_map_rooms_and_corridors();
     let (px, py) = map.rooms[0].center();
-
     let player_entity = spawner::player(&mut gs.ecs, px, py);
 
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
-    for (i, room) in map.rooms.iter().skip(1).enumerate() {
-        let (x, y) = room.center();
-        spawner::random_monster(&mut gs.ecs, x, y);
+    for room in map.rooms.iter().skip(1) {
+        spawner::spawn_room(&mut gs.ecs, room);
     }
 
     gs.ecs.insert(map);
