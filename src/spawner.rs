@@ -13,7 +13,8 @@ use super::{
     Position, 
     Viewshed, 
     Monster, 
-    BlocksTile };
+    BlocksTile,
+    map::MAPWIDTH };
 
 /// Spawns the player and returns their entity object
 pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
@@ -30,6 +31,9 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
         with(CombatStats { max_hp: 30, hp: 30, defense: 2, power: 5 }).
         build()
 }
+
+const MAX_MONSTERS : i32 = 4;
+const MAX_ITEMS : i32 = 2;
 
 pub fn spawn_room(ecs: &mut World, room: &Rect) {
     let mut monster_spawn_points : Vec<usize> = Vec::new();
