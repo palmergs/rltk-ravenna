@@ -2,9 +2,6 @@ extern crate specs;
 use specs::prelude::*;
 use super::{ CombatStats, WantsToMelee, Name, SufferDamage, GameLog };
 
-extern crate rltk;
-use rltk::{console};
-
 pub struct MeleeCombatSystem {}
 
 impl<'a> System<'a> for MeleeCombatSystem {
@@ -33,7 +30,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         log.entries.insert(0, format!("{} is unable to hurt {}", &name.name, &target_name.name));
                     } else {
                         log.entries.insert(0, format!("{} hits {} for {} damage", &name.name, &target_name.name, damage));
-                        inflict_damage.insert(wants_melee.target, SufferDamage { amount: damage });
+                        inflict_damage.insert(wants_melee.target, SufferDamage { amount: damage }).expect("Unable to do damage");
                     }
                 }
             }

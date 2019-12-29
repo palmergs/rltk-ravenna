@@ -55,6 +55,11 @@ pub struct Potion {
     pub heal_amount: i32
 }
 
+#[derive(Component, Debug, Clone)]
+pub struct WantsToDrinkPotion {
+    pub potion: Entity
+}
+
 #[derive(Component)]
 pub struct Renderable {
     pub glyph: u8,

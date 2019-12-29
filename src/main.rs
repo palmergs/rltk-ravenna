@@ -1,7 +1,7 @@
 #![recursion_limit="16"]
 
 rltk::add_wasm_support!();
-use rltk::{Console, GameState, Rltk, RGB, Point};
+use rltk::{Console, GameState, Rltk, Point};
 use specs::prelude::*;
 
 mod components;
@@ -41,6 +41,7 @@ use damage_system::DamageSystem;
 
 mod inventory_system;
 use inventory_system::ItemCollectionSystem;
+use inventory_system::PotionUseSystem;
 
 #[macro_use]
 extern crate specs_derive;
@@ -60,6 +61,26 @@ pub struct State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
+
+        draw_map(&self.ecs, ctx);
+
+        {
+            let map = self.ecs.fetch::<Map>();
+            let positions = self.ecs.read_storage::<Position>();
+            let renderables = self.ecs.read_storage::<Renderable>();
+
+            let data = (&positions, &renderables).join().collect::<Vec<_>>();
+            // data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order) );
+            for (pos, render) in data.iter() {
+                let idx = Map::xy_idx(pos.x, pos.y);
+                if map.visible[idx] {
+                    ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
+                }
+            }
+
+            draw_ui(&self.ecs, ctx);
+        }
+
         let mut newrunstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
@@ -69,6 +90,7 @@ impl GameState for State {
         match newrunstate {
             RunState::PreRun => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::AwaitingInput;
             }
 
@@ -78,17 +100,27 @@ impl GameState for State {
 
             RunState::PlayerTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::MonsterTurn;
             }
 
             RunState::MonsterTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 newrunstate = RunState::AwaitingInput;
             }
 
             RunState::ShowInventory => {
-                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
-                    newrunstate = RunState::AwaitingInput;
+                let result = gui::show_inventory(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => newrunstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {},
+                    gui::ItemMenuResult::Selected => {
+                        let item_entity = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToDrinkPotion>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDrinkPotion{ potion: item_entity }).expect("Unable to insert intent");
+                        newrunstate = RunState::PlayerTurn;
+                    }
                 }
             }
         }
@@ -98,20 +130,8 @@ impl GameState for State {
             *runwriter = newrunstate;
         }
 
+
         damage_system::delete_the_dead(&mut self.ecs);
-        draw_map(&self.ecs, ctx);
-
-        let map = self.ecs.fetch::<Map>();
-        let positions = self.ecs.read_storage::<Position>();
-        let renderables = self.ecs.read_storage::<Renderable>();
-        for (pos, render) in (&positions, &renderables).join() {
-            let idx = Map::xy_idx(pos.x, pos.y);
-            if map.visible[idx] {
-                ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
-            }
-        }
-
-        draw_ui(&self.ecs, ctx);
     }
 }
 
@@ -126,8 +146,8 @@ impl State {
         let mut mapindex = MapIndexingSystem{};
         mapindex.run_now(&self.ecs);
 
-        let mut melee_combat = MeleeCombatSystem{};
-        melee_combat.run_now(&self.ecs);
+        let mut melee = MeleeCombatSystem{};
+        melee.run_now(&self.ecs);
 
         let mut damage = DamageSystem{};
         damage.run_now(&self.ecs);
@@ -135,12 +155,15 @@ impl State {
         let mut pickup = ItemCollectionSystem{};
         pickup.run_now(&self.ecs);
 
+        let mut potions = PotionUseSystem{};
+        potions.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
 
 fn main() {
-    let mut context = Rltk::init_simple8x8(80, 50, "Hello Rust World!", "resources");
+    let context = Rltk::init_simple8x8(80, 50, "Hello Rust World!", "resources");
 //    context.with_post_scanlines(true);
 
     let mut gs = State { ecs: World::new() };
@@ -156,6 +179,7 @@ fn main() {
     gs.ecs.register::<InBackpack>();
     gs.ecs.register::<WantsToPickupItem>();
     gs.ecs.register::<Potion>();
+    gs.ecs.register::<WantsToDrinkPotion>();
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();

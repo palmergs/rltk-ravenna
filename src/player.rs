@@ -1,5 +1,5 @@
 extern crate rltk;
-use rltk::{VirtualKeyCode, Rltk, Point, console};
+use rltk::{VirtualKeyCode, Rltk, Point};
 
 extern crate specs;
 use specs::prelude::*;
@@ -8,7 +8,6 @@ use super::{
     RunState, 
     Position, 
     Player, 
-    TileType, 
     Map, 
     Item,
     State, 
