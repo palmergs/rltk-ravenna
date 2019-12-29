@@ -39,6 +39,9 @@ use melee_combat_system::MeleeCombatSystem;
 mod damage_system;
 use damage_system::DamageSystem;
 
+mod inventory_system;
+use inventory_system::ItemCollectionSystem;
+
 #[macro_use]
 extern crate specs_derive;
 
@@ -47,7 +50,8 @@ pub enum RunState {
     AwaitingInput,
     PreRun,
     PlayerTurn,
-    MonsterTurn }
+    MonsterTurn,
+    ShowInventory, }
 
 pub struct State {
     pub ecs: World,
@@ -80,6 +84,12 @@ impl GameState for State {
             RunState::MonsterTurn => {
                 self.run_systems();
                 newrunstate = RunState::AwaitingInput;
+            }
+
+            RunState::ShowInventory => {
+                if gui::show_inventory(self, ctx) == gui::ItemMenuResult::Cancel {
+                    newrunstate = RunState::AwaitingInput;
+                }
             }
         }
 
@@ -122,13 +132,16 @@ impl State {
         let mut damage = DamageSystem{};
         damage.run_now(&self.ecs);
 
+        let mut pickup = ItemCollectionSystem{};
+        pickup.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 }
 
 fn main() {
     let mut context = Rltk::init_simple8x8(80, 50, "Hello Rust World!", "resources");
-    context.with_post_scanlines(true);
+//    context.with_post_scanlines(true);
 
     let mut gs = State { ecs: World::new() };
 
@@ -139,6 +152,10 @@ fn main() {
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
+    gs.ecs.register::<Item>();
+    gs.ecs.register::<InBackpack>();
+    gs.ecs.register::<WantsToPickupItem>();
+    gs.ecs.register::<Potion>();
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
