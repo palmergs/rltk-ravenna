@@ -41,6 +41,7 @@ use damage_system::DamageSystem;
 
 mod inventory_system;
 use inventory_system::ItemCollectionSystem;
+use inventory_system::ItemDropSystem;
 use inventory_system::PotionUseSystem;
 
 #[macro_use]
@@ -52,7 +53,8 @@ pub enum RunState {
     PreRun,
     PlayerTurn,
     MonsterTurn,
-    ShowInventory, }
+    ShowInventory,
+    ShowDropItem, }
 
 pub struct State {
     pub ecs: World,
@@ -123,6 +125,20 @@ impl GameState for State {
                     }
                 }
             }
+
+            RunState::ShowDropItem => {
+                let result = gui::drop_item_menu(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => newrunstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {},
+                    gui::ItemMenuResult::Selected => {
+                        let item_entity = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToDropItem>();
+                        intent.insert(*self.ecs.fetch::<Entity>(), WantsToDropItem{ item: item_entity }).expect("Unable to insert intent");
+                        newrunstate = RunState::PlayerTurn;
+                    }
+                }
+            }
         }
 
         {
@@ -155,6 +171,9 @@ impl State {
         let mut pickup = ItemCollectionSystem{};
         pickup.run_now(&self.ecs);
 
+        let mut drop = ItemDropSystem{};
+        drop.run_now(&self.ecs);
+
         let mut potions = PotionUseSystem{};
         potions.run_now(&self.ecs);
 
@@ -178,6 +197,7 @@ fn main() {
     gs.ecs.register::<Item>();
     gs.ecs.register::<InBackpack>();
     gs.ecs.register::<WantsToPickupItem>();
+    gs.ecs.register::<WantsToDropItem>();
     gs.ecs.register::<Potion>();
     gs.ecs.register::<WantsToDrinkPotion>();
     gs.ecs.register::<Viewshed>();

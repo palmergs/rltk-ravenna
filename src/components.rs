@@ -40,6 +40,11 @@ pub struct Name {
 pub struct Item {}
 
 #[derive(Component, Debug, Clone)]
+pub struct WantsToDropItem {
+    pub item: Entity,
+}
+
+#[derive(Component, Debug, Clone)]
 pub struct InBackpack {
     pub owner: Entity
 }
