@@ -25,7 +25,7 @@ pub struct SufferDamage {
     pub amount: i32
 }
 
-#[derive(Component)]
+#[derive(Component, Debug, Clone)]
 pub struct Position {
     pub x: i32,
     pub y: i32,
@@ -38,6 +38,19 @@ pub struct Name {
 
 #[derive(Component, Debug)]
 pub struct Item {}
+
+#[derive(Component, Debug)]
+pub struct Consumable {}
+
+#[derive(Component, Debug, Clone)]
+pub struct Ranged {
+    pub range: i32,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct InflictsDamage {
+    pub damage: i32,
+}
 
 #[derive(Component, Debug, Clone)]
 pub struct WantsToDropItem {
@@ -56,13 +69,14 @@ pub struct WantsToPickupItem {
 }
 
 #[derive(Component, Debug)]
-pub struct Potion {
+pub struct ProvidesHealing {
     pub heal_amount: i32
 }
 
 #[derive(Component, Debug, Clone)]
-pub struct WantsToDrinkPotion {
-    pub potion: Entity
+pub struct WantsToUseItem {
+    pub item: Entity,
+    pub target: Option<rltk::Point>,
 }
 
 #[derive(Component)]

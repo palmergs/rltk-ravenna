@@ -2,14 +2,18 @@ extern crate specs;
 use specs::prelude::*;
 
 use super::{
+    Map,
     WantsToPickupItem,
-    WantsToDrinkPotion,
+    WantsToUseItem,
     WantsToDropItem,
-    Potion,
+    ProvidesHealing,
+    InflictsDamage,
+    Consumable,
     Name,
     InBackpack,
     Position,
     CombatStats,
+    SufferDamage,
     gamelog::GameLog };
 
 pub struct ItemCollectionSystem {}
@@ -42,40 +46,73 @@ impl<'a> System<'a> for ItemCollectionSystem {
     }
 }
 
-pub struct PotionUseSystem {}
+pub struct ItemUseSystem {}
 
-impl<'a> System<'a> for PotionUseSystem {
+impl<'a> System<'a> for ItemUseSystem {
     type SystemData = ( ReadExpect<'a, Entity>,
                         WriteExpect<'a, GameLog>,
                         Entities<'a>,
-                        WriteStorage<'a, WantsToDrinkPotion>,
+                        WriteStorage<'a, WantsToUseItem>,
                         ReadStorage<'a, Name>,
-                        ReadStorage<'a, Potion>,
-                        WriteStorage<'a, CombatStats> );
+                        ReadStorage<'a, Consumable>,
+                        ReadStorage<'a, ProvidesHealing>,
+                        ReadStorage<'a, InflictsDamage>,
+                        WriteStorage<'a, CombatStats>,
+                        WriteStorage<'a, SufferDamage>,
+                        ReadExpect<'a, Map> );
 
     fn run(&mut self, data: Self::SystemData) {
         let (player_entity, 
              mut gamelog, 
              entities, 
-             mut wants_drink, 
+             mut wants_use, 
              names, 
-             potions, 
-             mut combat_stats) = data;
+             consumables, 
+             healers,
+             damagers,
+             mut combat_stats,
+             mut suffer_damage,
+             map) = data;
 
-        for (entity, drink, stats) in (&entities, &wants_drink, &mut combat_stats).join() {
-            let potion = potions.get(drink.potion);
-            match potion {
+        for(entity, item, stats) in (&entities, &wants_use, &mut combat_stats).join() {
+            let item_heals = healers.get(item.item);
+            match item_heals {
                 None => {},
-                Some(potion) => {
-                    stats.hp = i32::min(stats.max_hp, stats.hp + potion.heal_amount);
+                Some(healer) => {
+                    stats.hp = i32::max(stats.max_hp, stats.hp + healer.heal_amount);
                     if entity == *player_entity {
-                        gamelog.entries.insert(0, format!("You drink the {}, healing {} hp", names.get(drink.potion).unwrap().name, potion.heal_amount));
+                        gamelog.entries.insert(0, format!("The {} heals you by {} points", names.get(item.item).unwrap().name, healer.heal_amount));
                     }
-                    entities.delete(drink.potion).expect("Delete failed");
+                }
+            }
+
+            let item_hurts = damagers.get(item.item);
+            match item_hurts {
+                None => {},
+                Some(damage) => {
+                    let target_point = item.target.unwrap();
+                    let idx = Map::xy_idx(target_point.x, target_point.y);
+                    for mob in map.contents[idx].iter() {
+                        suffer_damage.insert(*mob, SufferDamage { amount: damage.damage }).expect("Unable to insert");
+                        if entity == *player_entity {
+                            let mob_name = names.get(*mob).unwrap();
+                            let item_name = names.get(item.item).unwrap();
+                            gamelog.entries.insert(0, format!("You use {} on {} and inflict {} damage", item_name.name, mob_name.name, damage.damage));
+                        }
+                    }
+                }
+            }
+
+            let consumable = consumables.get(item.item);
+            match consumable {
+                None => {},
+                Some(_) => {
+                    entities.delete(item.item).expect("Delete failed");
                 }
             }
         }
-        wants_drink.clear();
+
+        wants_use.clear();
     }
 }
 

@@ -4,7 +4,16 @@ use rltk::{ VirtualKeyCode, RGB, Rltk, Console, Point };
 extern crate specs;
 use specs::prelude::*;
 
-use super::{ State, Map, CombatStats, Player, InBackpack, GameLog, Name, Position };
+use super::{
+    State, 
+    Map, 
+    Viewshed,
+    CombatStats, 
+    Player, 
+    InBackpack, 
+    GameLog, 
+    Name, 
+    Position };
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum ItemMenuResult { Cancel, NoResponse, Selected }
@@ -212,4 +221,45 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
                 &"<-".to_string());
         }
     }
+}
+
+pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuResult, Option<Point>) {
+    let player = gs.ecs.fetch::<Entity>();
+    let pos = gs.ecs.fetch::<Point>();
+    let viewsheds = gs.ecs.read_storage::<Viewshed>();
+
+    ctx.print_color(5, 0, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), "Select Target");
+    let mut available_cells = Vec::new();
+    let visible = viewsheds.get(*player);
+    if let Some(visible) = visible {
+        for idx in visible.tiles.iter() {
+            let distance = rltk::DistanceAlg::Pythagoras.distance2d(*pos, *idx);
+            if distance <= range as f32 {
+                ctx.set_bg(idx.x, idx.y, RGB::named(rltk::BLUE));
+                available_cells.push(idx);
+            }
+        }
+    } else {
+        return (ItemMenuResult::Cancel, None);
+    }
+
+    // Draw mouse cursor
+    let mouse_pos = ctx.mouse_pos();
+    let mut valid_target = false;
+    for idx in available_cells.iter() { 
+        if idx.x == mouse_pos.0 && idx.y == mouse_pos.1 { valid_target = true; }
+    }
+    if valid_target {
+        ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::CYAN));
+        if ctx.left_click {
+            return (ItemMenuResult::Selected, Some(Point::new(mouse_pos.0, mouse_pos.1)));
+        }
+    } else {
+        ctx.set_bg(mouse_pos.0, mouse_pos.1, RGB::named(rltk::RED));
+        if ctx.left_click {
+            return (ItemMenuResult::Cancel, None);
+        }
+    }
+
+    (ItemMenuResult::NoResponse, None)
 }
