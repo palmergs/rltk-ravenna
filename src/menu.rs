@@ -1,8 +1,5 @@
 extern crate rltk;
-use rltk::{ VirtualKeyCode, RGB, Rltk, Console, Point };
-
-extern crate specs;
-use specs::prelude::*;
+use rltk::{ VirtualKeyCode, RGB, Rltk, Console };
 
 use super::{
     State,

@@ -1,4 +1,7 @@
-#[derive(PartialEq, Clone, Copy, Debug)]
+extern crate serde;
+use serde::{ Serialize, Deserialize };
+
+#[derive(PartialEq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Rect {
     pub x1 : i32,
     pub y1 : i32,

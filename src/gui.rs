@@ -16,6 +16,15 @@ use super::{
     Position };
 
 #[derive(PartialEq, Copy, Clone)]
+pub enum MainMenuSelection { NewGame, LoadGame, Quit }
+
+#[derive(PartialEq, Copy, Clone)]
+pub enum MainMenuResult {
+    NoSelection { selected: MainMenuSelection },
+    Selected { selected: MainMenuSelection },
+}
+
+#[derive(PartialEq, Copy, Clone)]
 pub enum ItemMenuResult { Cancel, NoResponse, Selected }
 
 pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option<Entity>) {

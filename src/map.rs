@@ -8,16 +8,20 @@ use std::cmp::{max, min};
 extern crate specs;
 use specs::prelude::*;
 
+extern crate serde;
+use serde::{ Serialize, Deserialize };
+
 pub const MAPWIDTH : usize = 80;
 pub const MAPHEIGHT : usize = 50;
 pub const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
     Wall,
     Floor
 }
 
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Map {
     pub tiles : Vec<TileType>,
     pub revealed : Vec<bool>,
@@ -26,6 +30,9 @@ pub struct Map {
     pub rooms : Vec<Rect>,
     pub width : i32,
     pub height : i32,
+
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub contents : Vec<Vec<Entity>>,
 }
 
