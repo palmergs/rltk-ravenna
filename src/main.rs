@@ -287,7 +287,7 @@ fn main() {
     gs.ecs.insert(map);
     gs.ecs.insert(player_entity);
     gs.ecs.insert(Point::new(px, py));
-    gs.ecs.insert(RunState::PreRun);
+    gs.ecs.insert(RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame });
     gs.ecs.insert(gamelog::GameLog{ entries: vec!["Welcome to Rusty Roguelike".to_string()] });
 
     rltk::main_loop(context, gs);
