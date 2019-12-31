@@ -64,7 +64,8 @@ pub enum RunState {
     MonsterTurn,
     ShowInventory,
     ShowDropItem,
-    ShowTargeting { range: i32, item: Entity }, }
+    ShowTargeting { range: i32, item: Entity },
+    NextLevel }
 
 pub struct State {
     pub ecs: World,
@@ -201,6 +202,11 @@ impl GameState for State {
                 saveload_system::save_game(&mut self.ecs);
                 newrunstate = RunState::MainMenu { menu_selection: gui::MainMenuSelection::LoadGame };
             }
+
+            RunState::NextLevel => {
+                self.descend();
+                newrunstate = RunState::PreRun;
+            }
         }
 
         {
@@ -241,6 +247,80 @@ impl State {
 
         self.ecs.maintain();
     }
+
+    fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
+        let entities = self.ecs.entities();
+        let player = self.ecs.read_storage::<Player>();
+        let backpack = self.ecs.read_storage::<InBackpack>();
+        let player_entity = self.ecs.fetch::<Entity>();
+
+        let mut to_delete : Vec<Entity> = Vec::new();
+        for entity in entities.join() {
+            let mut should_delete = true;
+            
+            // don't delete the player
+            let p = player.get(entity);
+            if let Some(_p) = p { should_delete = false; }
+
+            // don't delete the player's equipment
+            let bp = backpack.get(entity);
+            if let Some(bp) = bp { 
+                if bp.owner == *player_entity { should_delete = false; }
+            }
+
+            if should_delete { to_delete.push(entity); }
+        }
+
+        to_delete
+    }
+
+    fn descend(&mut self) {
+        // delete the entities that aren't the player or equipment
+        let to_delete = self.entities_to_remove_on_level_change();
+        for target in to_delete {
+            self.ecs.delete_entity(target).expect("Unable to delete entity");
+        }
+
+        // build a new map and place the player
+        let worldmap;
+        {
+            let mut worldmap_resource = self.ecs.write_resource::<Map>();
+            let current_depth = worldmap_resource.depth;
+            *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1);
+            worldmap = worldmap_resource.clone();
+        }
+
+        // spawn some bad gusys
+        for room in worldmap.rooms.iter().skip(1) {
+            spawner::spawn_room(&mut self.ecs, room);
+        }
+
+        // place the player and update resources
+        let (px, py) = worldmap.rooms[0].center();
+        let mut pos = self.ecs.write_resource::<Point>();
+        *pos = Point::new(px, py);
+        let mut positions = self.ecs.write_storage::<Position>();
+        let player_entity = self.ecs.fetch::<Entity>();
+        let player_pos_comp = positions.get_mut(*player_entity);
+        if let Some(player_pos_comp) = player_pos_comp {
+            player_pos_comp.x = px;
+            player_pos_comp.y = py;
+        }
+
+        // mark the player's visibility as dirty
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        let vs = viewsheds.get_mut(*player_entity);
+        if let Some(vs) = vs { vs.dirty = true; }
+
+        // notify the player and give some health
+        let mut gamelog = self.ecs.fetch_mut::<gamelog::GameLog>();
+        gamelog.entries.insert(0, "You descend to the next level and take a moment to heal".to_string());
+        let mut stats = self.ecs.write_storage::<CombatStats>();
+        let player_health = stats.get_mut(*player_entity);
+        if let Some(player_health) = player_health {
+            player_health.hp = i32::max(player_health.hp, player_health.max_hp / 2);
+        }
+    }
 }
 
 fn main() {
@@ -275,7 +355,7 @@ fn main() {
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
-    let map = Map::new_map_rooms_and_corridors();
+    let map = Map::new_map_rooms_and_corridors(1);
     let (px, py) = map.rooms[0].center();
     let player_entity = spawner::player(&mut gs.ecs, px, py);
 

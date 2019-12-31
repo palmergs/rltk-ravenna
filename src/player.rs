@@ -9,6 +9,7 @@ use super::{
     Position, 
     Player, 
     Map, 
+    TileType,
     Item,
     State, 
     Viewshed, 
@@ -98,11 +99,30 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
 
             VirtualKeyCode::Escape => return RunState::SaveGame,
 
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            },
+
             _ => { return RunState::AwaitingInput }
         },
     }
 
     RunState::PlayerTurn
+}
+
+fn try_next_level(ecs: &mut World) -> bool {
+    let player_pos = ecs.fetch::<Point>();
+    let map = ecs.fetch::<Map>();
+    let player_idx = Map::xy_idx(player_pos.x, player_pos.y);
+    if map.tiles[player_idx] == TileType::DownStairs {
+        true
+    } else {
+        let mut gamelog = ecs.fetch_mut::<GameLog>();
+        gamelog.entries.insert(0, "There is no way down from here".to_string());
+        false
+    }
 }
 
 fn get_item(ecs: &mut World) {

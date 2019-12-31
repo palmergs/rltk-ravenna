@@ -18,7 +18,8 @@ pub const MAPCOUNT : usize = MAPHEIGHT * MAPWIDTH;
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
     Wall,
-    Floor
+    Floor,
+    DownStairs,
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
@@ -30,6 +31,7 @@ pub struct Map {
     pub rooms : Vec<Rect>,
     pub width : i32,
     pub height : i32,
+    pub depth: i32,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -44,7 +46,7 @@ impl Map {
 
     /// Makes a map with solid walls and 400 randomly placed
     /// squares.
-    pub fn new_map_random() -> Map {
+    pub fn new_map_random(depth: i32) -> Map {
         let mut map = Map {
             tiles : vec![TileType::Wall; MAPCOUNT],
             revealed : vec![false; MAPCOUNT],
@@ -53,6 +55,7 @@ impl Map {
             rooms : Vec::new(),
             width : MAPWIDTH as i32,
             height : MAPHEIGHT as i32,
+            depth,
             contents : vec![Vec::new(); MAPCOUNT],
         };
 
@@ -79,7 +82,7 @@ impl Map {
         map
     }
 
-    pub fn new_map_rooms_and_corridors() -> Map {
+    pub fn new_map_rooms_and_corridors(depth: i32) -> Map {
         let mut map = Map {
             tiles : vec![TileType::Wall; MAPCOUNT],
             revealed : vec![false; MAPCOUNT],
@@ -88,6 +91,7 @@ impl Map {
             rooms : Vec::new(),
             width : MAPWIDTH as i32,
             height : MAPHEIGHT as i32,
+            depth,
             contents : vec![Vec::new(); MAPCOUNT],
         };
 
@@ -126,6 +130,10 @@ impl Map {
                 map.rooms.push(room);
             }
         }
+
+        let stairs_position = map.rooms[map.rooms.len() - 1].center();
+        let stairs_idx = Map::xy_idx(stairs_position.0, stairs_position.1);
+        map.tiles[stairs_idx] = TileType::DownStairs;
 
         map
     }
@@ -230,11 +238,15 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             match tile {
                 TileType::Floor => {
                     glyph = rltk::to_cp437('.');
-                    fg = RGB::from_f32(0.0, 0.4, 0.4);
+                    fg = RGB::from_f32(0.0, 0.5, 0.5);
                 },
                 TileType::Wall => {
                     glyph = rltk::to_cp437('#');
-                    fg = RGB::from_f32(0.4, 0.4, 0.0);
+                    fg = RGB::from_f32(0.6, 0.6, 0.0);
+                },
+                TileType::DownStairs => {
+                    glyph = rltk::to_cp437('>');
+                    fg = RGB::from_f32(0.0, 1.0, 1.0);
                 }
             }
             if !map.visible[idx] { fg = fg.to_greyscale(); }
