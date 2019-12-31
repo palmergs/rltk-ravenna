@@ -20,7 +20,7 @@ pub struct WantsToMelee {
     pub target: Entity
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct SufferDamage {
     pub amount: i32
 }
@@ -48,8 +48,18 @@ pub struct Ranged {
 }
 
 #[derive(Component, Debug, Clone)]
+pub struct AreaOfEffect {
+    pub radius: i32,
+}
+
+#[derive(Component, Debug, Clone)]
 pub struct InflictsDamage {
     pub damage: i32,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct Confusion {
+    pub turns: i32,
 }
 
 #[derive(Component, Debug, Clone)]
@@ -68,7 +78,7 @@ pub struct WantsToPickupItem {
     pub item: Entity,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct ProvidesHealing {
     pub heal_amount: i32
 }

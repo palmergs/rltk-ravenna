@@ -220,6 +220,8 @@ fn main() {
     gs.ecs.register::<Item>();
     gs.ecs.register::<Consumable>();
     gs.ecs.register::<Ranged>();
+    gs.ecs.register::<Confusion>();
+    gs.ecs.register::<AreaOfEffect>();
     gs.ecs.register::<ProvidesHealing>();
     gs.ecs.register::<InflictsDamage>();
     gs.ecs.register::<InBackpack>();

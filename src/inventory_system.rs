@@ -14,6 +14,8 @@ use super::{
     Position,
     CombatStats,
     SufferDamage,
+    AreaOfEffect,
+    Confusion,
     gamelog::GameLog };
 
 pub struct ItemCollectionSystem {}
@@ -59,6 +61,8 @@ impl<'a> System<'a> for ItemUseSystem {
                         ReadStorage<'a, InflictsDamage>,
                         WriteStorage<'a, CombatStats>,
                         WriteStorage<'a, SufferDamage>,
+                        ReadStorage<'a, AreaOfEffect>,
+                        WriteStorage<'a, Confusion>,
                         ReadExpect<'a, Map> );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -72,42 +76,90 @@ impl<'a> System<'a> for ItemUseSystem {
              damagers,
              mut combat_stats,
              mut suffer_damage,
+             aoe,
+             mut confused,
              map) = data;
 
-        for(entity, item, stats) in (&entities, &wants_use, &mut combat_stats).join() {
-            let item_heals = healers.get(item.item);
-            match item_heals {
-                None => {},
-                Some(healer) => {
-                    stats.hp = i32::max(stats.max_hp, stats.hp + healer.heal_amount);
-                    if entity == *player_entity {
-                        gamelog.entries.insert(0, format!("The {} heals you by {} points", names.get(item.item).unwrap().name, healer.heal_amount));
+        for(entity, useitem) in (&entities, &wants_use).join() {
+            let mut targets : Vec<Entity> = Vec::new();
+            match useitem.target {
+                None => { targets.push(*player_entity); }
+                Some(target) => {
+                    let area_effect = aoe.get(useitem.item);
+                    match area_effect {
+                        None => {
+                            let idx = Map::xy_idx(target.x, target.y);
+                            for mob in map.contents[idx].iter() { targets.push(*mob); }
+                        }
+                        Some(area_effect) => {
+                            let mut blast_tiles = rltk::field_of_view(target, area_effect.radius, &*map);
+                            blast_tiles.retain(|p| p.x > 0 && p.x < map.width-1 && p.y > 0 && p.y < map.height-1);
+                            for tile_idx in blast_tiles.iter() {
+                                let idx = Map::xy_idx(tile_idx.x, tile_idx.y);
+                                for mob in map.contents[idx].iter() { targets.push(*mob); }
+                            }
+                        }
                     }
                 }
             }
 
-            let item_hurts = damagers.get(item.item);
+            let mut add_confusion = Vec::new();
+            {
+                let causes_confusion = confused.get(useitem.item);
+                match causes_confusion {
+                    None => {},
+                    Some(confusion) => {
+                        for mob in targets.iter() {
+                            add_confusion.push((*mob, confusion.turns));
+                            if entity == *player_entity {
+                                let mob_name = names.get(*mob).unwrap();
+                                let item_name = names.get(useitem.item).unwrap();
+                                gamelog.entries.insert(0, format!("You use {} on {}, confusing them", item_name.name, mob_name.name));
+                            }
+                        }
+                    }
+                }
+            }
+            for mob in add_confusion.iter() {
+                confused.insert(mob.0, Confusion { turns: mob.1 }).expect("Unable to insert confused");
+            }
+
+            let item_heals = healers.get(useitem.item);
+            match item_heals {
+                None => {},
+                Some(healer) => {
+                    for target in targets.iter() {
+                        let stats = combat_stats.get_mut(*target);
+                        if let Some(stats) = stats {
+                            stats.hp = i32::max(stats.max_hp, stats.hp + healer.heal_amount);
+                            if entity == *player_entity {
+                                gamelog.entries.insert(0, format!("The {} heals you by {} points", names.get(useitem.item).unwrap().name, healer.heal_amount));
+                            }
+                        }
+                    }
+                }
+            }
+
+            let item_hurts = damagers.get(useitem.item);
             match item_hurts {
                 None => {},
                 Some(damage) => {
-                    let target_point = item.target.unwrap();
-                    let idx = Map::xy_idx(target_point.x, target_point.y);
-                    for mob in map.contents[idx].iter() {
+                    for mob in targets.iter() {
                         suffer_damage.insert(*mob, SufferDamage { amount: damage.damage }).expect("Unable to insert");
                         if entity == *player_entity {
                             let mob_name = names.get(*mob).unwrap();
-                            let item_name = names.get(item.item).unwrap();
+                            let item_name = names.get(useitem.item).unwrap();
                             gamelog.entries.insert(0, format!("You use {} on {} and inflict {} damage", item_name.name, mob_name.name, damage.damage));
                         }
                     }
                 }
             }
 
-            let consumable = consumables.get(item.item);
+            let consumable = consumables.get(useitem.item);
             match consumable {
                 None => {},
                 Some(_) => {
-                    entities.delete(item.item).expect("Delete failed");
+                    entities.delete(useitem.item).expect("Delete failed");
                 }
             }
         }
