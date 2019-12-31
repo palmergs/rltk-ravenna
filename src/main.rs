@@ -17,10 +17,8 @@ mod map;
 pub use map::*;
 
 mod gui;
-use gui::*;
-
 mod menu;
-use menu::*;
+mod saveload_system;
 
 mod gamelog;
 use gamelog::*;
@@ -102,7 +100,7 @@ impl GameState for State {
                         }
                     }
 
-                    draw_ui(&self.ecs, ctx);
+                    gui::draw_ui(&self.ecs, ctx);
                 }
             }
         }
@@ -182,13 +180,17 @@ impl GameState for State {
             }
 
             RunState::MainMenu {..} => {
-                let result = main_menu(self, ctx);
+                let result = menu::main_menu(self, ctx);
                 match result {
                     gui::MainMenuResult::NoSelection { selected } => newrunstate = RunState::MainMenu { menu_selection: selected },
                     gui::MainMenuResult::Selected { selected } => {
                         match selected {
                             gui::MainMenuSelection::NewGame => newrunstate = RunState::PreRun,
-                            gui::MainMenuSelection::LoadGame => newrunstate = RunState::PreRun,
+                            gui::MainMenuSelection::LoadGame => {
+                                saveload_system::load_game(&mut self.ecs);
+                                newrunstate = RunState::AwaitingInput;
+                                saveload_system::delete_save();
+                            }
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0); }
                         }
                     }
@@ -196,9 +198,8 @@ impl GameState for State {
             }
 
             RunState::SaveGame => {
-                let data = serde_json::to_string(&*self.ecs.fetch::<Map>()).unwrap();
-                println!("{}", data);
-                newrunstate = RunState::MainMenu { menu_selection: MainMenuSelection::LoadGame };
+                saveload_system::save_game(&mut self.ecs);
+                newrunstate = RunState::MainMenu { menu_selection: gui::MainMenuSelection::LoadGame };
             }
         }
 
@@ -247,7 +248,6 @@ fn main() {
 //    context.with_post_scanlines(true);
 
     let mut gs = State { ecs: World::new() };
-    gs.ecs.register::<SimpleMarker<SerializeMe>>();
 
     gs.ecs.register::<Player>();
     gs.ecs.register::<Monster>();
@@ -270,6 +270,10 @@ fn main() {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<SimpleMarker<SerializeMe>>();
+    gs.ecs.register::<SerializationHelper>();
+
+    gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
     let map = Map::new_map_rooms_and_corridors();
     let (px, py) = map.rooms[0].center();
@@ -285,7 +289,6 @@ fn main() {
     gs.ecs.insert(Point::new(px, py));
     gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(gamelog::GameLog{ entries: vec!["Welcome to Rusty Roguelike".to_string()] });
-    gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
     rltk::main_loop(context, gs);
 }

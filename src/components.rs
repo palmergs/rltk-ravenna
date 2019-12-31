@@ -11,7 +11,6 @@ extern crate specs_derive;
 extern crate serde;
 use serde::{ Serialize, Deserialize };
 
-pub struct SerializeMe;
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Player {}
@@ -118,3 +117,10 @@ pub struct Viewshed {
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct BlocksTile {}
+
+pub struct SerializeMe;
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct SerializationHelper {
+    pub map: super::map::Map
+}
