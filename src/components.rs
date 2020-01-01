@@ -61,6 +61,12 @@ pub struct Equippable {
     pub slot: EquipmentSlot
 }
 
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct Equipped {
+    pub owner: Entity,
+    pub slot: EquipmentSlot
+}
+
 #[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct Ranged {
     pub range: i32,
