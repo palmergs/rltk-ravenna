@@ -241,7 +241,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                     fg = RGB::from_f32(0.0, 0.5, 0.5);
                 },
                 TileType::Wall => {
-                    glyph = rltk::to_cp437('#');
+                    glyph = wall_glyph(&*map, x, y);
                     fg = RGB::from_f32(0.6, 0.6, 0.0);
                 },
                 TileType::DownStairs => {
@@ -259,4 +259,40 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             y += 1;
         }
     }
+}
+
+fn wall_glyph(map: &Map, x: i32, y: i32) -> u8 {
+    let mut mask: u8 = 0;
+
+    if is_revealed_and_wall(map, x, y-1) { mask += 1; }
+    if is_revealed_and_wall(map, x, y+1) { mask += 2; }
+    if is_revealed_and_wall(map, x-1, y) { mask += 4; }
+    if is_revealed_and_wall(map, x+1, y) { mask += 8; }
+    mask_to_glyph(mask)
+}
+
+fn mask_to_glyph(mask: u8) -> u8 {
+    match mask {
+        0 => 9,
+        1 => 186,
+        2 => 186,
+        3 => 186,
+        4 => 205,
+        5 => 188,
+        6 => 187,
+        7 => 185,
+        8 => 205,
+        9 => 200,
+        10 => 201,
+        11 => 204,
+        12 => 205,
+        13 => 202,
+        14 => 203,
+        _ => 35
+    }
+}
+
+fn is_revealed_and_wall(map: &Map, x: i32, y: i32) -> bool {
+    let idx = Map::xy_idx(x, y);
+    map.tiles[idx] == TileType::Wall && map.revealed[idx]
 }
