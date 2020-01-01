@@ -18,6 +18,7 @@ use super::{
     InBackpack,
     Equippable,
     Equipped,
+    particle_system::ParticleBuilder,
     gamelog::GameLog };
 
 pub struct ItemCollectionSystem {}
@@ -68,7 +69,9 @@ impl<'a> System<'a> for ItemUseSystem {
                         ReadStorage<'a, Equippable>,
                         WriteStorage<'a, Equipped>,
                         WriteStorage<'a, InBackpack>,
-                        ReadExpect<'a, Map> );
+                        ReadExpect<'a, Map>,
+                        WriteExpect<'a, ParticleBuilder>,
+                        ReadStorage<'a, Position> );
 
     fn run(&mut self, data: Self::SystemData) {
         let (player_entity, 
@@ -86,7 +89,9 @@ impl<'a> System<'a> for ItemUseSystem {
              equippable,
              mut equipment,
              mut backpack,
-             map) = data;
+             map, 
+             mut particle_builder,
+             positions) = data;
 
         for(entity, useitem) in (&entities, &wants_use).join() {
             let mut targets : Vec<Entity> = Vec::new();
@@ -105,6 +110,13 @@ impl<'a> System<'a> for ItemUseSystem {
                             for tile_idx in blast_tiles.iter() {
                                 let idx = Map::xy_idx(tile_idx.x, tile_idx.y);
                                 for mob in map.contents[idx].iter() { targets.push(*mob); }
+                                particle_builder.requests(
+                                    tile_idx.x,
+                                    tile_idx.y,
+                                    rltk::RGB::named(rltk::ORANGE),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('░'),
+                                    200.0);
                             }
                         }
                     }
@@ -123,6 +135,16 @@ impl<'a> System<'a> for ItemUseSystem {
                                 let mob_name = names.get(*mob).unwrap();
                                 let item_name = names.get(useitem.item).unwrap();
                                 gamelog.entries.insert(0, format!("You use {} on {}, confusing them", item_name.name, mob_name.name));
+                            }
+                            let pos = positions.get(*mob);
+                            if let Some(pos) = pos {
+                                particle_builder.requests(
+                                    pos.x,
+                                    pos.y,
+                                    rltk::RGB::named(rltk::MAGENTA),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('?'),
+                                    200.0);
                             }
                         }
                     }
@@ -143,6 +165,17 @@ impl<'a> System<'a> for ItemUseSystem {
                             if entity == *player_entity {
                                 gamelog.entries.insert(0, format!("The {} heals you by {} points", names.get(useitem.item).unwrap().name, healer.heal_amount));
                             }
+
+                            let pos = positions.get(*target);
+                            if let Some(pos) = pos {
+                                particle_builder.requests(
+                                    pos.x,
+                                    pos.y,
+                                    rltk::RGB::named(rltk::GREEN),
+                                    rltk::RGB::named(rltk::BLACK),
+                                    rltk::to_cp437('♥'),
+                                    200.0);
+                            }
                         }
                     }
                 }
@@ -154,6 +187,17 @@ impl<'a> System<'a> for ItemUseSystem {
                 Some(damage) => {
                     for mob in targets.iter() {
                         suffer_damage.insert(*mob, SufferDamage { amount: damage.damage }).expect("Unable to insert");
+                        let pos = positions.get(*mob);
+                        if let Some(pos) = pos {
+                            particle_builder.requests(
+                                pos.x,
+                                pos.y,
+                                rltk::RGB::named(rltk::ORANGE),
+                                rltk::RGB::named(rltk::BLACK),
+                                rltk::to_cp437('‼'),
+                                200.0);
+                        }
+
                         if entity == *player_entity {
                             let mob_name = names.get(*mob).unwrap();
                             let item_name = names.get(useitem.item).unwrap();

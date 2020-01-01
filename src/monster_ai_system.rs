@@ -8,7 +8,8 @@ use super::{
     RunState,
     Position,
     Confusion,
-    WantsToMelee };
+    WantsToMelee,
+    particle_system::ParticleBuilder };
 
 extern crate rltk;
 use rltk::{Point};
@@ -25,7 +26,8 @@ impl<'a> System<'a> for MonsterAI {
                         ReadStorage<'a, Monster>,
                         WriteStorage<'a, Position>,
                         WriteStorage<'a, WantsToMelee>,
-                        WriteStorage<'a, Confusion>, );
+                        WriteStorage<'a, Confusion>,
+                        WriteExpect<'a, ParticleBuilder>, );
 
     fn run(&mut self, data : Self::SystemData) {
         let (mut map,
@@ -37,7 +39,8 @@ impl<'a> System<'a> for MonsterAI {
             monster, 
             mut position, 
             mut wants_to_melee,
-            mut confused) = data;
+            mut confused,
+            mut particle_builder) = data;
 
         if *runstate != RunState::MonsterTurn { return; }
 
@@ -48,6 +51,13 @@ impl<'a> System<'a> for MonsterAI {
                 i_am_confused.turns -= 1;
                 if i_am_confused.turns < 1 { confused.remove(entity); }
                 can_act = false;
+                particle_builder.requests(
+                    pos.x, 
+                    pos.y,
+                    rltk::RGB::named(rltk::MAGENTA),
+                    rltk::RGB::named(rltk::BLACK),
+                    rltk::to_cp437('?'),
+                    200.0);
             }
 
             if can_act {

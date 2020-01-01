@@ -52,6 +52,8 @@ use inventory_system::ItemCollectionSystem;
 use inventory_system::ItemDropSystem;
 use inventory_system::ItemUseSystem;
 
+mod particle_system;
+
 #[macro_use]
 extern crate specs_derive;
 
@@ -82,6 +84,7 @@ impl GameState for State {
         }
 
         ctx.cls();
+        particle_system::cull_dead_particles(&mut self.ecs, ctx);
 
         match newrunstate {
             RunState::MainMenu {..} => {}
@@ -258,6 +261,9 @@ impl State {
         let mut consumed = ItemUseSystem{};
         consumed.run_now(&self.ecs);
 
+        let mut particles = particle_system::ParticleSpawnSystem{};
+        particles.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 
@@ -414,6 +420,7 @@ fn main() {
     gs.ecs.register::<SerializationHelper>();
     gs.ecs.register::<Equippable>();
     gs.ecs.register::<Equipped>();
+    gs.ecs.register::<ParticleLifetime>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
@@ -431,6 +438,7 @@ fn main() {
     gs.ecs.insert(Point::new(px, py));
     gs.ecs.insert(RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame });
     gs.ecs.insert(gamelog::GameLog{ entries: vec!["Welcome to Rusty Roguelike".to_string()] });
+    gs.ecs.insert(particle_system::ParticleBuilder::new());
 
     rltk::main_loop(context, gs);
 }

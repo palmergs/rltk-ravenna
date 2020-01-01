@@ -142,6 +142,11 @@ pub struct Viewshed {
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct BlocksTile {}
 
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+pub struct ParticleLifetime {
+    pub lifetime_ms: f32,
+}
+
 pub struct SerializeMe;
 
 #[derive(Component, Serialize, Deserialize, Clone)]

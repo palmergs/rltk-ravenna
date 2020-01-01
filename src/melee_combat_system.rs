@@ -1,3 +1,6 @@
+extern crate rltk;
+use rltk::{ RGB, Rltk };
+
 extern crate specs;
 use specs::prelude::*;
 use super::{ 
@@ -8,7 +11,9 @@ use super::{
     GameLog,
     MeleePowerBonus,
     DefenseBonus,
-    Equipped };
+    Equipped,
+    particle_system::ParticleBuilder,
+    Position, };
 
 pub struct MeleeCombatSystem {}
 
@@ -21,7 +26,9 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         WriteStorage<'a, SufferDamage>,
                         ReadStorage<'a, MeleePowerBonus>,
                         ReadStorage<'a, DefenseBonus>,
-                        ReadStorage<'a, Equipped> );
+                        ReadStorage<'a, Equipped>,
+                        WriteExpect<'a, ParticleBuilder>,
+                        ReadStorage<'a, Position> );
 
     fn run(&mut self, data : Self::SystemData) {
         let (entities, 
@@ -32,7 +39,9 @@ impl<'a> System<'a> for MeleeCombatSystem {
             mut inflict_damage,
             melee_bonuses,
             defense_bonuses,
-            equipment) = data;
+            equipment,
+            mut particle_builder, 
+            positions ) = data;
 
         for (entity, wants_melee, name, stats) in (&entities, &wants_melee, &names, &combat_stats).join() {
             if stats.hp > 0 {
@@ -54,10 +63,21 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         }
                     }
 
+
                     let damage = i32::max(0, stats.power + offensive_bonus - target_stats.defense - defensive_bonus);
                     if damage == 0 {
                         log.entries.insert(0, format!("{} is unable to hurt {}", &name.name, &target_name.name));
                     } else {
+                        let pos = positions.get(wants_melee.target);
+                        if let Some(pos) = pos {
+                            particle_builder.requests(
+                                pos.x, 
+                                pos.y, 
+                                RGB::named(rltk::ORANGE),
+                                RGB::named(rltk::BLACK),
+                                rltk::to_cp437('‼'),
+                                200.0);
+                        }
                         log.entries.insert(0, format!("{} hits {} for {} damage", &name.name, &target_name.name, damage));
                         inflict_damage.insert(wants_melee.target, SufferDamage { amount: damage }).expect("Unable to do damage");
                     }
