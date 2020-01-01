@@ -29,6 +29,7 @@ use player::*;
 mod rect;
 pub use rect::Rect;
 
+mod random_table;
 mod spawner;
 
 mod visibility_system;

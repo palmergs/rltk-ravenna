@@ -9,6 +9,7 @@ use super::{
     Position, 
     Player, 
     Map, 
+    Monster,
     TileType,
     Item,
     State, 
@@ -99,6 +100,9 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
 
             VirtualKeyCode::Escape => return RunState::SaveGame,
 
+            VirtualKeyCode::Numpad5 => return skip_turn(&mut gs.ecs),
+            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
+
             VirtualKeyCode::Period => {
                 if try_next_level(&mut gs.ecs) {
                     return RunState::NextLevel;
@@ -107,6 +111,34 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState {
 
             _ => { return RunState::AwaitingInput }
         },
+    }
+
+    RunState::PlayerTurn
+}
+
+fn skip_turn(ecs: &mut World) -> RunState {
+    let player = ecs.fetch::<Entity>();
+    let viewsheds = ecs.read_storage::<Viewshed>();
+    let monsters = ecs.read_storage::<Monster>();
+    let worldmap = ecs.fetch::<Map>();
+
+    let mut can_heal = true;
+    let viewshed = viewsheds.get(*player).unwrap();
+    for tile in viewshed.tiles.iter() {
+        let idx = Map::xy_idx(tile.x, tile.y);
+        for entity_id in worldmap.contents[idx].iter() {
+            let mob = monsters.get(*entity_id);
+            match mob {
+                None => {}
+                Some(_) => { can_heal = false; }
+            }
+        }
+    }
+
+    if can_heal {
+        let mut stats = ecs.write_storage::<CombatStats>();
+        let player_hp = stats.get_mut(*player).unwrap();
+        player_hp.hp = i32::min(player_hp.hp + 1, player_hp.max_hp);
     }
 
     RunState::PlayerTurn
