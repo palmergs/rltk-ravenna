@@ -27,6 +27,8 @@ use super::{
     SerializeMe,
     Equippable,
     EquipmentSlot,
+    MeleePowerBonus,
+    DefenseBonus,
     random_table::RandomTable,
     map::MAPWIDTH };
 
@@ -43,7 +45,7 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
         with(Player {}).
         with(Viewshed { tiles: Vec::new(), range: 8, dirty: true }).
         with(Name { name: "Player".to_string() }).
-        with(CombatStats { max_hp: 30, hp: 30, defense: 2, power: 5 }).
+        with(CombatStats { max_hp: 30, hp: 30, defense: 0, power: 3 }).
         marked::<SimpleMarker<SerializeMe>>().
         build()
 }
@@ -88,6 +90,8 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, depth: i32) {
             "Magic Missile Scroll" => magic_missile_scroll(ecs, x, y),
             "Dagger" => dagger(ecs, x, y),
             "Shield" => shield(ecs, x, y),
+            "Longsword" => longsword(ecs, x, y),
+            "Tower Shield" => tower_shield(ecs, x, y),
             _ => {}
         }
     }
@@ -102,18 +106,20 @@ fn room_table(depth: i32) -> RandomTable {
         add("Confusion Scroll", 2 + depth).
         add("Magic Missile Scroll", 4).
         add("Dagger", 3).
-        add("Shield", 3)
+        add("Shield", 3).
+        add("Longsword", depth - 1).
+        add("Tower Shield", depth - 1)
 }
 
 fn orc(ecs: &mut World, x: i32, y: i32) {
-    monster(ecs, x, y, rltk::to_cp437('o'), "Orc")
+    monster(ecs, x, y, rltk::to_cp437('o'), "Orc", 1, 4)
 }
 
 fn goblin(ecs: &mut World, x: i32, y: i32) {
-    monster(ecs, x, y, rltk::to_cp437('g'), "Goblin")
+    monster(ecs, x, y, rltk::to_cp437('g'), "Goblin", 1, 5)
 }
 
-fn monster<S : ToString>(ecs: &mut World, x: i32, y: i32, glyph: u8, name: S) {
+fn monster<S : ToString>(ecs: &mut World, x: i32, y: i32, glyph: u8, name: S, def: i32, pow: i32) {
     ecs.create_entity().
         with(Position { x, y }).
         with(Renderable {
@@ -126,7 +132,7 @@ fn monster<S : ToString>(ecs: &mut World, x: i32, y: i32, glyph: u8, name: S) {
         with(Monster {}).
         with(Name { name: name.to_string() }).
         with(BlocksTile {}).
-        with(CombatStats { max_hp: 16, hp: 16, defense: 1, power: 4 }).
+        with(CombatStats { max_hp: 16, hp: 16, defense: def, power: pow }).
         marked::<SimpleMarker<SerializeMe>>().
         build();
 }
@@ -215,6 +221,24 @@ fn dagger(ecs: &mut World, x: i32, y: i32) {
         with(Name { name: "Dagger".to_string() }).
         with(Item {}).
         with(Equippable { slot: EquipmentSlot::Melee }).
+        with(MeleePowerBonus { power: 2 }).
+        marked::<SimpleMarker<SerializeMe>>().
+        build();
+}
+
+fn longsword(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity().
+        with(Position { x, y }).
+        with(Renderable {
+            glyph: rltk::to_cp437('/'),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        }).
+        with(Name { name: "Longsword".to_string() }).
+        with(Item {}).
+        with(Equippable { slot: EquipmentSlot::Melee }).
+        with(MeleePowerBonus { power: 4 }).
         marked::<SimpleMarker<SerializeMe>>().
         build();
 }
@@ -231,6 +255,24 @@ fn shield(ecs: &mut World, x: i32, y: i32) {
         with(Name { name: "Shield".to_string() }).
         with(Item {}).
         with(Equippable { slot: EquipmentSlot::Shield }).
+        with(DefenseBonus { defense: 2 }).
+        marked::<SimpleMarker<SerializeMe>>().
+        build();
+}
+
+fn tower_shield(ecs: &mut World, x: i32, y: i32) {
+    ecs.create_entity().
+        with(Position { x, y }).
+        with(Renderable {
+            glyph: rltk::to_cp437('('),
+            fg: RGB::named(rltk::CYAN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        }).
+        with(Name { name: "Tower Shield".to_string() }).
+        with(Item {}).
+        with(Equippable { slot: EquipmentSlot::Shield }).
+        with(DefenseBonus { defense: 3 }).
         marked::<SimpleMarker<SerializeMe>>().
         build();
 }

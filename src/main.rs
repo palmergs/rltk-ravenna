@@ -66,7 +66,8 @@ pub enum RunState {
     ShowInventory,
     ShowDropItem,
     ShowTargeting { range: i32, item: Entity },
-    NextLevel }
+    NextLevel,
+    GameOver }
 
 pub struct State {
     pub ecs: World,
@@ -208,6 +209,17 @@ impl GameState for State {
                 self.descend();
                 newrunstate = RunState::PreRun;
             }
+
+            RunState::GameOver => {
+                let result = gui::game_over(ctx);
+                match result {
+                    gui::GameOverResult::NoSelection => {},
+                    gui::GameOverResult::QuitToMenu => {
+                        self.game_over_cleanup();
+                        newrunstate = RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame };
+                    }
+                }
+            }
         }
 
         {
@@ -254,6 +266,7 @@ impl State {
         let player = self.ecs.read_storage::<Player>();
         let backpack = self.ecs.read_storage::<InBackpack>();
         let player_entity = self.ecs.fetch::<Entity>();
+        let equipment = self.ecs.read_storage::<Equipped>();
 
         let mut to_delete : Vec<Entity> = Vec::new();
         for entity in entities.join() {
@@ -267,6 +280,11 @@ impl State {
             let bp = backpack.get(entity);
             if let Some(bp) = bp { 
                 if bp.owner == *player_entity { should_delete = false; }
+            }
+
+            let eq = equipment.get(entity);
+            if let Some(eq) = eq {
+                if eq.owner == *player_entity { should_delete = false; }
             }
 
             if should_delete { to_delete.push(entity); }
@@ -323,6 +341,44 @@ impl State {
             player_health.hp = i32::max(player_health.hp, player_health.max_hp / 2);
         }
     }
+
+    fn game_over_cleanup(&mut self) {
+        let mut to_delete = Vec::new();
+        for e in self.ecs.entities().join() { to_delete.push(e); }
+        for d in to_delete.iter() {
+            self.ecs.delete_entity(*d).expect("deletion failed");
+        }
+
+        let worldmap;
+        {
+            let mut worldmap_resource = self.ecs.write_resource::<Map>();
+            *worldmap_resource = Map::new_map_rooms_and_corridors(1);
+            worldmap = worldmap_resource.clone();
+        }
+
+        for room in worldmap.rooms.iter().skip(1) {
+            spawner::spawn_room(&mut self.ecs, room, 1);
+        }
+
+        // place the payer and update resources
+        let (px, py) = worldmap.rooms[0].center();
+        let player = spawner::player(&mut self.ecs, px, py);
+        let mut pos = self.ecs.write_resource::<Point>();
+        *pos = Point::new(px, py);
+        let mut positions = self.ecs.write_storage::<Position>();
+        let mut player_entity_writer = self.ecs.write_resource::<Entity>();
+        *player_entity_writer = player;
+        let player_pos_comp = positions.get_mut(player);
+        if let Some(player_pos_comp) = player_pos_comp {
+            player_pos_comp.x = px;
+            player_pos_comp.y = py;
+        }
+
+        // mark the player's visibility as dirty
+        let mut viewsheds = self.ecs.write_storage::<Viewshed>();
+        let vs = viewsheds.get_mut(player);
+        if let Some(vs) = vs { vs.dirty = true; }
+    }
 }
 
 fn main() {
@@ -340,6 +396,8 @@ fn main() {
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Item>();
     gs.ecs.register::<Consumable>();
+    gs.ecs.register::<MeleePowerBonus>();
+    gs.ecs.register::<DefenseBonus>();
     gs.ecs.register::<Ranged>();
     gs.ecs.register::<Confusion>();
     gs.ecs.register::<AreaOfEffect>();

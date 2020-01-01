@@ -67,6 +67,16 @@ pub struct Equipped {
     pub slot: EquipmentSlot
 }
 
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct MeleePowerBonus {
+    pub power: i32,
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct DefenseBonus {
+    pub defense: i32,
+}
+
 #[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct Ranged {
     pub range: i32,
