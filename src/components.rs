@@ -53,6 +53,14 @@ pub struct Item {}
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Consumable {}
 
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+pub enum EquipmentSlot { Melee, Shield }
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct Equippable {
+    pub slot: EquipmentSlot
+}
+
 #[derive(Component, Debug, Clone, ConvertSaveload)]
 pub struct Ranged {
     pub range: i32,

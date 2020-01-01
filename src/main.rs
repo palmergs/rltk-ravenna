@@ -354,6 +354,7 @@ fn main() {
     gs.ecs.register::<BlocksTile>();
     gs.ecs.register::<SimpleMarker<SerializeMe>>();
     gs.ecs.register::<SerializationHelper>();
+    gs.ecs.register::<Equippable>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
