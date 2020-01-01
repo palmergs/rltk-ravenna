@@ -4,6 +4,7 @@ use rltk::{ RGB, Rltk, Console, BaseMap, Algorithm2D, Point };
 use super::{Rect};
 
 use std::cmp::{max, min};
+use std::collections::HashSet;
 
 extern crate specs;
 use specs::prelude::*;
@@ -32,6 +33,7 @@ pub struct Map {
     pub width : i32,
     pub height : i32,
     pub depth: i32,
+    pub bloodstains : HashSet<usize>,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -56,6 +58,7 @@ impl Map {
             width : MAPWIDTH as i32,
             height : MAPHEIGHT as i32,
             depth,
+            bloodstains: HashSet::new(),
             contents : vec![Vec::new(); MAPCOUNT],
         };
 
@@ -92,6 +95,7 @@ impl Map {
             width : MAPWIDTH as i32,
             height : MAPHEIGHT as i32,
             depth,
+            bloodstains: HashSet::new(),
             contents : vec![Vec::new(); MAPCOUNT],
         };
 
@@ -235,6 +239,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
         if map.revealed[idx] {
             let glyph;
             let mut fg;
+            let mut bg = RGB::from_f32(0.0, 0.0, 0.0);
             match tile {
                 TileType::Floor => {
                     glyph = rltk::to_cp437('.');
@@ -249,8 +254,16 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                     fg = RGB::from_f32(0.0, 1.0, 1.0);
                 }
             }
-            if !map.visible[idx] { fg = fg.to_greyscale(); }
-            ctx.set(x, y, fg, RGB::from_f32(0.0, 0.0, 0.0), glyph);
+            if map.bloodstains.contains(&idx) {
+                bg = RGB::from_f32(0.75, 0.0, 0.0); 
+            }
+
+            if !map.visible[idx] {
+                fg = fg.to_greyscale();
+                bg = RGB::from_f32(0.0, 0.0, 0.0);
+            }
+
+            ctx.set(x, y, fg, bg, glyph);
         }
 
         x += 1;
