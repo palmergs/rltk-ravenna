@@ -49,13 +49,13 @@ pub fn player(ecs: &mut World, x: i32, y: i32) -> Entity {
 const MAX_THINGS : i32 = 5;
 
 #[allow(clippy::map_entry)]
-pub fn spawn_room(ecs: &mut World, room: &Rect) {
-    let spawn_table = room_table();
+pub fn spawn_room(ecs: &mut World, room: &Rect, depth: i32) {
+    let spawn_table = room_table(depth);
     let mut spawn_points : HashMap<usize, String> = HashMap::new();
 
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        let num_spawns = rng.roll_dice(1, MAX_THINGS + 3) - 3;
+        let num_spawns = rng.roll_dice(1, MAX_THINGS + 3) + (depth - 1) - 3;
         for _i in 0 .. num_spawns {
             let mut added = false;
             let mut tries = 0;
@@ -89,13 +89,13 @@ pub fn spawn_room(ecs: &mut World, room: &Rect) {
     }
 }
 
-fn room_table() -> RandomTable {
+fn room_table(depth: i32) -> RandomTable {
     RandomTable::new().
         add("Goblin", 10).
-        add("Orc", 1).
+        add("Orc", 1 + depth).
         add("Health Potion", 7).
-        add("Fireball Scroll", 2).
-        add("Confusion Scroll", 2).
+        add("Fireball Scroll", 2 + depth).
+        add("Confusion Scroll", 2 + depth).
         add("Magic Missile Scroll", 4)
 }
 
