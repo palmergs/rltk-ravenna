@@ -1,5 +1,5 @@
 extern crate rltk;
-use rltk::{ RGB, Rltk };
+use rltk::{ RGB };
 
 extern crate specs;
 use specs::prelude::*;

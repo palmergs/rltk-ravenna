@@ -3,7 +3,6 @@ use rltk::{ RGB, Rltk, Console, BaseMap, Algorithm2D, Point };
 
 use super::{Rect};
 
-use std::cmp::{max, min};
 use std::collections::HashSet;
 
 extern crate specs;

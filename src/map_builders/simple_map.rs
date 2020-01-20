@@ -6,6 +6,7 @@ use super::{
     TileType,
     Rect,
     Position,
+    spawner,
     apply_room_to_map,
     apply_horizontal_tunnel, 
     apply_vertical_tunnel };
@@ -19,6 +20,12 @@ impl MapBuilder for SimpleMapBuilder {
         let mut map = Map::new(depth);
         let player_pos = SimpleMapBuilder::rooms_and_corridors(&mut map);
         (map, player_pos)
+    }
+
+    fn spawn(map: &mut Map, ecs: &mut World, depth: i32) {
+        for room in map.rooms.iter().skip(1) {
+            spawner::spawn_room(ecs, room, depth);
+        }
     }
 }
 
@@ -34,7 +41,7 @@ impl SimpleMapBuilder {
 
         let mut rng = RandomNumberGenerator::new();
 
-        for i in 0..MAX_ROOMS {
+        for _i in 0..MAX_ROOMS {
             let w = rng.range(MIN_SIZE, MAX_SIZE);
             let h = rng.range(MIN_SIZE, MAX_SIZE);
             let x = rng.range(1, map.width - w);

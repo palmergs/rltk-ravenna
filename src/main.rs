@@ -323,7 +323,7 @@ impl State {
 
         // spawn some bad gusys
         for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, current_depth + 1);
+            spawner::spawn_room(&mut self.ecs, room, 1);
         }
 
         // place the player and update resources
@@ -361,13 +361,15 @@ impl State {
         }
 
         let worldmap;
-        let mut start_pos;
+        let px;
+        let py;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             {
-                let (map, new_start_pos) = map_builders::build_random_map(1);
+                let (map, map_start_pos) = map_builders::build_random_map(1);
                 *worldmap_resource = map;
-                start_pos = new_start_pos;
+                px = map_start_pos.x;
+                py = map_start_pos.y;
             }
             worldmap = worldmap_resource.clone();
         }
@@ -377,7 +379,6 @@ impl State {
         }
 
         // place the payer and update resources
-        let (px, py) = (start_pos.x, start_pos.y);
         let player = spawner::player(&mut self.ecs, px, py);
         let mut pos = self.ecs.write_resource::<Point>();
         *pos = Point::new(px, py);
