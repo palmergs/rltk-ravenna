@@ -14,15 +14,14 @@ use common::*;
 
 use specs::prelude::*;
 
-trait MapBuilder {
-    fn build(depth: i32) -> (Map, Position);
-    fn spawn(map: &mut Map, ecs: &mut World, depth: i32);
+pub trait MapBuilder {
+    fn build_map(&mut self);
+    fn spawn_entities(&mut self, ecs: &mut World);
+    fn get_map(&self) -> Map;
+    fn get_starting_pos(&self) -> Position;
 }
 
-pub fn build_random_map(depth: i32) -> (Map, Position) {
-    SimpleMapBuilder::build(depth)
+pub fn random_builder(depth: i32) -> Box<dyn MapBuilder> {
+    Box::new(SimpleMapBuilder::new(depth))
 }
 
-pub fn spawn(map: &mut Map, ecs: &mut World, depth: i32) {
-    SimpleMapBuilder::spawn(map, ecs, depth);
-}

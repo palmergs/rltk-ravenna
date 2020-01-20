@@ -309,33 +309,29 @@ impl State {
         }
 
         // build a new map and place the player
+        let mut builder;
         let worldmap;
-        let current_depth;
-        let player_start;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
-            current_depth = worldmap_resource.depth;
-            let (newmap, start) = map_builders::build_random_map(current_depth + 1);
-            *worldmap_resource = newmap;
-            player_start = start;
+            builder = map_builders::random_builder(worldmap_resource.depth + 1);
+            builder.build_map();
+            *worldmap_resource = builder.get_map();
             worldmap = worldmap_resource.clone();
         }
-
+        
         // spawn some bad gusys
-        for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, 1);
-        }
+        builder.spawn_entities(&mut self.ecs);
 
         // place the player and update resources
-        let (px, py) = (player_start.x, player_start.y);
+        let start = builder.get_starting_pos();
         let mut pos = self.ecs.write_resource::<Point>();
-        *pos = Point::new(px, py);
+        *pos = Point::new(start.x, start.y);
         let mut positions = self.ecs.write_storage::<Position>();
         let player_entity = self.ecs.fetch::<Entity>();
         let player_pos_comp = positions.get_mut(*player_entity);
         if let Some(player_pos_comp) = player_pos_comp {
-            player_pos_comp.x = px;
-            player_pos_comp.y = py;
+            player_pos_comp.x = start.x;
+            player_pos_comp.y = start.y;
         }
 
         // mark the player's visibility as dirty
@@ -360,35 +356,31 @@ impl State {
             self.ecs.delete_entity(*d).expect("deletion failed");
         }
 
+        let mut builder;
         let worldmap;
-        let px;
-        let py;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
-            {
-                let (map, map_start_pos) = map_builders::build_random_map(1);
-                *worldmap_resource = map;
-                px = map_start_pos.x;
-                py = map_start_pos.y;
-            }
+            builder = map_builders::random_builder(1);
+            builder.build_map();
+            *worldmap_resource = builder.get_map();
             worldmap = worldmap_resource.clone();
         }
 
-        for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, 1);
-        }
+        // Spawn bad guys
+        builder.spawn_entities(&mut self.ecs);
 
         // place the payer and update resources
-        let player = spawner::player(&mut self.ecs, px, py);
+        let start = builder.get_starting_pos();
+        let player = spawner::player(&mut self.ecs, start.x, start.y);
         let mut pos = self.ecs.write_resource::<Point>();
-        *pos = Point::new(px, py);
+        *pos = Point::new(start.x, start.y);
         let mut positions = self.ecs.write_storage::<Position>();
         let mut player_entity_writer = self.ecs.write_resource::<Entity>();
         *player_entity_writer = player;
         let player_pos_comp = positions.get_mut(player);
         if let Some(player_pos_comp) = player_pos_comp {
-            player_pos_comp.x = px;
-            player_pos_comp.y = py;
+            player_pos_comp.x = start.x;
+            player_pos_comp.y = start.y;
         }
 
         // mark the player's visibility as dirty
@@ -435,14 +427,15 @@ fn main() {
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
-    let (map, start_pos) = map_builders::build_random_map(1);
+    let mut builder = map_builders::random_builder(1);
+    builder.build_map();
+    let map = builder.get_map();
+    let start_pos = builder.get_starting_pos();
     let (px, py) = (start_pos.x, start_pos.y);
     let player_entity = spawner::player(&mut gs.ecs, px, py);
 
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
-    for room in map.rooms.iter().skip(1) {
-        spawner::spawn_room(&mut gs.ecs, room, 1);
-    }
+    builder.spawn_entities(&mut gs.ecs);
 
     gs.ecs.insert(map);
     gs.ecs.insert(player_entity);
