@@ -41,6 +41,22 @@ pub struct Map {
 }
 
 impl Map {
+    /// Generates an empty map consisting entirely of solid walls
+    pub fn new(depth: i32) -> Map {
+        Map {
+            tiles: vec![TileType::Wall; MAPCOUNT],
+            rooms: Vec::new(),
+            width: MAPWIDTH as i32,
+            height: MAPHEIGHT as i32,
+            revealed: vec![false; MAPCOUNT],
+            visible: vec![false; MAPCOUNT],
+            blocked: vec![false; MAPCOUNT],
+            depth,
+            bloodstains: HashSet::new(),
+            contents: vec![Vec::new(); MAPCOUNT],
+        }
+    }
+
     /// Converts coordinates into a linear index
     pub fn xy_idx(x: i32, y: i32) -> usize {
         (y as usize * MAPWIDTH) + x as usize
@@ -83,85 +99,6 @@ impl Map {
         }
 
         map
-    }
-
-    pub fn new_map_rooms_and_corridors(depth: i32) -> Map {
-        let mut map = Map {
-            tiles : vec![TileType::Wall; MAPCOUNT],
-            revealed : vec![false; MAPCOUNT],
-            visible : vec![false; MAPCOUNT],
-            blocked : vec![false; MAPCOUNT],
-            rooms : Vec::new(),
-            width : MAPWIDTH as i32,
-            height : MAPHEIGHT as i32,
-            depth,
-            bloodstains: HashSet::new(),
-            contents : vec![Vec::new(); MAPCOUNT],
-        };
-
-        const MAX_ROOMS : i32 = 30;
-        const MIN_SIZE : i32 = 4;
-        const MAX_SIZE : i32 = 10;
-
-        let mut rng = rltk::RandomNumberGenerator::new();
-        for _i in 0..MAX_ROOMS {
-            let w = rng.range(MIN_SIZE, MAX_SIZE);
-            let h = rng.range(MIN_SIZE, MAX_SIZE);
-            let x = rng.range(1, map.width - 1 - w);
-            let y = rng.range(1, map.height - 1 - h);
-
-            let room = Rect::new(x, y, w, h);
-            let mut ok = true;
-            for other in map.rooms.iter() {
-                if room.intersect(other) {
-                    ok = false;
-                }
-            }
-
-            if ok {
-                Map::sub_room_from_map(&room, &mut map);
-                if !map.rooms.is_empty() {
-                    let (new_x, new_y) = room.center();
-                    let (pre_x, pre_y) = map.rooms[map.rooms.len() - 1].center();
-                    if rng.range(0, 2) == 1 {
-                        Map::sub_horizontal_tunnel(pre_x, new_x, pre_y, &mut map);
-                        Map::sub_vertical_tunnel(new_x, pre_y, new_y, &mut map);
-                    } else {
-                        Map::sub_vertical_tunnel(pre_x, pre_y, new_y, &mut map);
-                        Map::sub_horizontal_tunnel(pre_x, new_x, new_y, &mut map);
-                    }
-                }
-                map.rooms.push(room);
-            }
-        }
-
-        let stairs_position = map.rooms[map.rooms.len() - 1].center();
-        let stairs_idx = Map::xy_idx(stairs_position.0, stairs_position.1);
-        map.tiles[stairs_idx] = TileType::DownStairs;
-
-        map
-    }
-
-    fn sub_room_from_map(room: &Rect, map: &mut Map) {
-        for x in room.x1 ..= room.x2 {
-            for y in room.y1 ..= room.y2 {
-                map.tiles[Map::xy_idx(x, y)] = TileType::Floor;
-            }
-        }
-    }
-
-    fn sub_horizontal_tunnel(x1: i32, x2: i32, y: i32, map: &mut Map) {
-        for x in min(x1, x2)..max(x1, x2)+1 {
-            let idx = Map::xy_idx(x, y);
-            map.tiles[idx] = TileType::Floor;
-        }
-    }
-
-    fn sub_vertical_tunnel(x: i32, y1: i32, y2: i32, map: &mut Map) {
-        for y in min(y1, y2)..max(y1, y2)+1 {
-            let idx = Map::xy_idx(x, y);
-            map.tiles[idx] = TileType::Floor;
-        }
     }
 
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {

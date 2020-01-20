@@ -20,6 +20,8 @@ mod gui;
 mod menu;
 mod saveload_system;
 
+pub mod map_builders;
+
 mod gamelog;
 use gamelog::*;
 
@@ -309,10 +311,13 @@ impl State {
         // build a new map and place the player
         let worldmap;
         let current_depth;
+        let player_start;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             current_depth = worldmap_resource.depth;
-            *worldmap_resource = Map::new_map_rooms_and_corridors(current_depth + 1);
+            let (newmap, start) = map_builders::build_random_map(current_depth + 1);
+            *worldmap_resource = newmap;
+            player_start = start;
             worldmap = worldmap_resource.clone();
         }
 
@@ -322,7 +327,7 @@ impl State {
         }
 
         // place the player and update resources
-        let (px, py) = worldmap.rooms[0].center();
+        let (px, py) = (player_start.x, player_start.y);
         let mut pos = self.ecs.write_resource::<Point>();
         *pos = Point::new(px, py);
         let mut positions = self.ecs.write_storage::<Position>();
@@ -356,9 +361,14 @@ impl State {
         }
 
         let worldmap;
+        let mut start_pos;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
-            *worldmap_resource = Map::new_map_rooms_and_corridors(1);
+            {
+                let (map, new_start_pos) = map_builders::build_random_map(1);
+                *worldmap_resource = map;
+                start_pos = new_start_pos;
+            }
             worldmap = worldmap_resource.clone();
         }
 
@@ -367,7 +377,7 @@ impl State {
         }
 
         // place the payer and update resources
-        let (px, py) = worldmap.rooms[0].center();
+        let (px, py) = (start_pos.x, start_pos.y);
         let player = spawner::player(&mut self.ecs, px, py);
         let mut pos = self.ecs.write_resource::<Point>();
         *pos = Point::new(px, py);
@@ -424,8 +434,8 @@ fn main() {
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
-    let map = Map::new_map_rooms_and_corridors(1);
-    let (px, py) = map.rooms[0].center();
+    let (map, start_pos) = map_builders::build_random_map(1);
+    let (px, py) = (start_pos.x, start_pos.y);
     let player_entity = spawner::player(&mut gs.ecs, px, py);
 
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
