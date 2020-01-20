@@ -310,13 +310,11 @@ impl State {
 
         // build a new map and place the player
         let mut builder;
-        let worldmap;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             builder = map_builders::random_builder(worldmap_resource.depth + 1);
             builder.build_map();
             *worldmap_resource = builder.get_map();
-            worldmap = worldmap_resource.clone();
         }
         
         // spawn some bad gusys
@@ -357,13 +355,11 @@ impl State {
         }
 
         let mut builder;
-        let worldmap;
         {
             let mut worldmap_resource = self.ecs.write_resource::<Map>();
             builder = map_builders::random_builder(1);
             builder.build_map();
             *worldmap_resource = builder.get_map();
-            worldmap = worldmap_resource.clone();
         }
 
         // Spawn bad guys

@@ -28,7 +28,6 @@ pub struct Map {
     pub revealed : Vec<bool>,
     pub visible : Vec<bool>,
     pub blocked : Vec<bool>,
-    pub rooms : Vec<Rect>,
     pub width : i32,
     pub height : i32,
     pub depth: i32,
@@ -44,7 +43,6 @@ impl Map {
     pub fn new(depth: i32) -> Map {
         Map {
             tiles: vec![TileType::Wall; MAPCOUNT],
-            rooms: Vec::new(),
             width: MAPWIDTH as i32,
             height: MAPHEIGHT as i32,
             revealed: vec![false; MAPCOUNT],
@@ -69,7 +67,6 @@ impl Map {
             revealed : vec![false; MAPCOUNT],
             visible : vec![false; MAPCOUNT],
             blocked: vec![false; MAPCOUNT],
-            rooms : Vec::new(),
             width : MAPWIDTH as i32,
             height : MAPHEIGHT as i32,
             depth,
