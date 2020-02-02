@@ -66,6 +66,9 @@ pub struct Consumable {}
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct ProvidesFood {}
 
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+pub struct MagicMapper {}
+
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum EquipmentSlot { Melee, Shield }
 

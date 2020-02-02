@@ -21,6 +21,7 @@ use super::{
     HungerState,
     HungerClock,
     ProvidesFood,
+    MagicMapper,
     particle_system::ParticleBuilder,
     gamelog::GameLog };
 
@@ -65,6 +66,7 @@ impl<'a> System<'a> for ItemUseSystem {
                         ReadStorage<'a, Consumable>,
                         ReadStorage<'a, ProvidesFood>,
                         ReadStorage<'a, ProvidesHealing>,
+                        ReadStorage<'a, MagicMapper>,
                         ReadStorage<'a, InflictsDamage>,
                         WriteStorage<'a, CombatStats>,
                         WriteStorage<'a, HungerClock>,
@@ -74,7 +76,7 @@ impl<'a> System<'a> for ItemUseSystem {
                         ReadStorage<'a, Equippable>,
                         WriteStorage<'a, Equipped>,
                         WriteStorage<'a, InBackpack>,
-                        ReadExpect<'a, Map>,
+                        WriteExpect<'a, Map>,
                         WriteExpect<'a, ParticleBuilder>,
                         ReadStorage<'a, Position> );
 
@@ -87,6 +89,7 @@ impl<'a> System<'a> for ItemUseSystem {
              consumables, 
              provides_food,
              healers,
+             magic_mappers,
              damagers,
              mut combat_stats,
              mut hunger_clocks,
@@ -96,7 +99,7 @@ impl<'a> System<'a> for ItemUseSystem {
              equippable,
              mut equipment,
              mut backpack,
-             map, 
+             mut map, 
              mut particle_builder,
              positions) = data;
 
@@ -259,6 +262,19 @@ impl<'a> System<'a> for ItemUseSystem {
                             0,
                             format!("You eat the {}", names.get(useitem.item).unwrap().name));
                     }
+                }
+            }
+
+            let magic_mapper = magic_mappers.get(useitem.item);
+            match magic_mapper {
+                None => {},
+                Some(_) => {
+                    for r in map.revealed.iter_mut() {
+                        *r = true;
+                    }
+                    gamelog.entries.insert(
+                        0,
+                        "The map is revealed to you!".to_string());
                 }
             }
 
