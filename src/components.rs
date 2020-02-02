@@ -15,6 +15,16 @@ use serde::{ Serialize, Deserialize };
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Player {}
 
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum HungerState { WellFed, Normal, Hungry, Starving }
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct HungerClock {
+    pub state: HungerState,
+    pub duration: i32
+}
+
+
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Monster {}
 
@@ -52,6 +62,9 @@ pub struct Item {}
 
 #[derive(Component, Debug, Clone, Serialize, Deserialize)]
 pub struct Consumable {}
+
+#[derive(Component, Debug, Clone, Serialize, Deserialize)]
+pub struct ProvidesFood {}
 
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum EquipmentSlot { Melee, Shield }

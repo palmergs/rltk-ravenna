@@ -18,6 +18,9 @@ use super::{
     InBackpack,
     Equippable,
     Equipped,
+    HungerState,
+    HungerClock,
+    ProvidesFood,
     particle_system::ParticleBuilder,
     gamelog::GameLog };
 
@@ -60,9 +63,11 @@ impl<'a> System<'a> for ItemUseSystem {
                         WriteStorage<'a, WantsToUseItem>,
                         ReadStorage<'a, Name>,
                         ReadStorage<'a, Consumable>,
+                        ReadStorage<'a, ProvidesFood>,
                         ReadStorage<'a, ProvidesHealing>,
                         ReadStorage<'a, InflictsDamage>,
                         WriteStorage<'a, CombatStats>,
+                        WriteStorage<'a, HungerClock>,
                         WriteStorage<'a, SufferDamage>,
                         ReadStorage<'a, AreaOfEffect>,
                         WriteStorage<'a, Confusion>,
@@ -80,9 +85,11 @@ impl<'a> System<'a> for ItemUseSystem {
              mut wants_use, 
              names, 
              consumables, 
+             provides_food,
              healers,
              damagers,
              mut combat_stats,
+             mut hunger_clocks,
              mut suffer_damage,
              aoe,
              mut confused,
@@ -235,6 +242,22 @@ impl<'a> System<'a> for ItemUseSystem {
                     backpack.remove(useitem.item);
                     if target == *player_entity {
                         gamelog.entries.insert(0, format!("You equip {}", names.get(useitem.item).unwrap().name));
+                    }
+                }
+            }
+
+            let item_edible = provides_food.get(useitem.item);
+            match item_edible {
+                None => {}
+                Some(_) => {
+                    let target = targets[0];
+                    let hc = hunger_clocks.get_mut(target);
+                    if let Some(hc) = hc {
+                        hc.state = HungerState::WellFed;
+                        hc.duration = 20;
+                        gamelog.entries.insert(
+                            0,
+                            format!("You eat the {}", names.get(useitem.item).unwrap().name));
                     }
                 }
             }

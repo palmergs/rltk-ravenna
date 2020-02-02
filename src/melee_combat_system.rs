@@ -12,6 +12,8 @@ use super::{
     MeleePowerBonus,
     DefenseBonus,
     Equipped,
+    HungerClock,
+    HungerState,
     particle_system::ParticleBuilder,
     Position, };
 
@@ -28,6 +30,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
                         ReadStorage<'a, DefenseBonus>,
                         ReadStorage<'a, Equipped>,
                         WriteExpect<'a, ParticleBuilder>,
+                        ReadStorage<'a, HungerClock>,
                         ReadStorage<'a, Position> );
 
     fn run(&mut self, data : Self::SystemData) {
@@ -41,6 +44,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
             defense_bonuses,
             equipment,
             mut particle_builder, 
+            hunger_clocks,
             positions ) = data;
 
         for (entity, wants_melee, name, stats) in (&entities, &wants_melee, &names, &combat_stats).join() {
@@ -49,6 +53,13 @@ impl<'a> System<'a> for MeleeCombatSystem {
                 for (_ie, power_bonus, equipped_by) in (&entities, &melee_bonuses, &equipment).join() {
                     if equipped_by.owner == entity {
                         offensive_bonus += power_bonus.power
+                    }
+                }
+
+                let hc = hunger_clocks.get(entity);
+                if let Some(hc) = hc {
+                    if hc.state == HungerState::WellFed {
+                        offensive_bonus += 1;
                     }
                 }
 

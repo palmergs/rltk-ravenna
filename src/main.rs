@@ -56,6 +56,8 @@ use inventory_system::ItemUseSystem;
 
 mod particle_system;
 
+mod hunger_system;
+
 #[macro_use]
 extern crate specs_derive;
 
@@ -266,6 +268,9 @@ impl State {
         let mut particles = particle_system::ParticleSpawnSystem{};
         particles.run_now(&self.ecs);
 
+        let mut hunger = hunger_system::HungerSystem{};
+        hunger.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 
@@ -420,6 +425,8 @@ fn main() {
     gs.ecs.register::<Equippable>();
     gs.ecs.register::<Equipped>();
     gs.ecs.register::<ParticleLifetime>();
+    gs.ecs.register::<HungerClock>();
+    gs.ecs.register::<ProvidesFood>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
